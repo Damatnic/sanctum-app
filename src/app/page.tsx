@@ -95,6 +95,43 @@ const quotes = [
   { text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb" },
 ];
 
+// AI-suggested examples for empty states
+const suggestedHabits = [
+  { name: "Morning Meditation", icon: "🧘", desc: "Start your day with clarity" },
+  { name: "Read 20 mins", icon: "📚", desc: "Build knowledge daily" },
+  { name: "Exercise", icon: "💪", desc: "Move your body" },
+  { name: "Drink 8 glasses", icon: "💧", desc: "Stay hydrated" },
+  { name: "No phone before bed", icon: "📵", desc: "Better sleep quality" },
+  { name: "Gratitude journal", icon: "🙏", desc: "Shift your mindset" },
+];
+
+const suggestedGoals = [
+  { name: "Read 12 books this year", icon: "📖", target: 12 },
+  { name: "Workout 100 times", icon: "🏋️", target: 100 },
+  { name: "Save $5,000", icon: "💰", target: 5000 },
+  { name: "Learn 500 vocab words", icon: "🎓", target: 500 },
+  { name: "Complete 50 projects", icon: "✅", target: 50 },
+  { name: "Meditate 30 days", icon: "🧘", target: 30 },
+];
+
+const journalPrompts = [
+  "What are you grateful for today?",
+  "What's one thing you learned recently?",
+  "Describe a challenge you overcame.",
+  "What would make today great?",
+  "How are you feeling right now, and why?",
+  "What's something you're looking forward to?",
+  "What habit do you want to build?",
+  "Reflect on a recent win, big or small.",
+];
+
+const projectIdeas = [
+  { name: "Side Project", icon: "🚀", desc: "Build something you're passionate about", color: "violet" },
+  { name: "Learn New Skill", icon: "🎯", desc: "Course or certification", color: "cyan" },
+  { name: "Health Goal", icon: "❤️", desc: "Fitness, nutrition, or wellness", color: "rose" },
+  { name: "Creative Work", icon: "🎨", desc: "Art, writing, or music", color: "amber" },
+];
+
 const emptyData: SanctumData = {
   version: DATA_VERSION,
   habits: [],
@@ -625,9 +662,21 @@ export default function Home() {
           </div>
           
           {habits.length === 0 ? (
-            <div onClick={() => setActiveModal('addHabit')} style={{ ...cardHover, padding: '32px', textAlign: 'center', border: '2px dashed rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>✨</div>
-              <div style={{ fontSize: '13px', color: '#64748b' }}>Add your first habit</div>
+            <div style={{ ...card, padding: '20px', border: '1px solid rgba(124,58,237,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <span style={{ fontSize: '16px' }}>✨</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#a78bfa' }}>AI Suggestions</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {suggestedHabits.slice(0, 6).map((h, i) => (
+                  <div key={i} onClick={() => { setNewHabit({ name: h.name, icon: h.icon }); setActiveModal('addHabit'); }} style={{ ...cardHover, padding: '12px', textAlign: 'center', backgroundColor: 'rgba(124,58,237,0.05)', borderColor: 'rgba(124,58,237,0.15)' }}>
+                    <div style={{ fontSize: '20px', marginBottom: '4px' }}>{h.icon}</div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#e2e8f0' }}>{h.name}</div>
+                    <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>{h.desc}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setActiveModal('addHabit')} style={{ ...btnSecondary, width: '100%', marginTop: '12px', fontSize: '12px' }}>+ Create Custom Habit</button>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
@@ -658,9 +707,24 @@ export default function Home() {
             </div>
             
             {goals.length === 0 ? (
-              <div onClick={() => setActiveModal('addGoal')} style={{ ...cardHover, padding: '24px', textAlign: 'center', border: '2px dashed rgba(255,255,255,0.1)' }}>
-                <div style={{ fontSize: '28px', marginBottom: '8px' }}>🎯</div>
-                <div style={{ fontSize: '13px', color: '#64748b' }}>Set your first goal</div>
+              <div style={{ ...card, padding: '16px', border: '1px solid rgba(6,182,212,0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '14px' }}>🎯</span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#22d3ee' }}>Goal Ideas</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {suggestedGoals.slice(0, 3).map((g, i) => (
+                    <div key={i} onClick={() => { setNewGoal({ name: g.name, icon: g.icon, target: String(g.target) }); setActiveModal('addGoal'); }} style={{ ...cardHover, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(6,182,212,0.05)', borderColor: 'rgba(6,182,212,0.15)' }}>
+                      <span style={{ fontSize: '18px' }}>{g.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600 }}>{g.name}</div>
+                        <div style={{ fontSize: '10px', color: '#64748b' }}>Target: {g.target}</div>
+                      </div>
+                      <span style={{ fontSize: '10px', color: '#22d3ee' }}>+ Add</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setActiveModal('addGoal')} style={{ ...btnSecondary, width: '100%', marginTop: '10px', fontSize: '11px', padding: '8px' }}>+ Create Custom Goal</button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -726,6 +790,15 @@ export default function Home() {
             <div style={{ marginBottom: '12px' }}><span style={sectionTitle}>Quick Thought</span></div>
             <div style={{ ...card, padding: '14px' }}>
               <textarea value={journalInput} onChange={e => setJournalInput(e.target.value)} placeholder="What's on your mind?" style={{ ...input, height: '60px', resize: 'none' }} />
+              {!journalInput && (
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                  {journalPrompts.slice(0, 3).map((prompt, i) => (
+                    <button key={i} onClick={() => setJournalInput(prompt + "\n\n")} style={{ padding: '4px 8px', borderRadius: '12px', backgroundColor: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', color: '#a78bfa', fontSize: '10px', cursor: 'pointer' }}>
+                      💡 {prompt.slice(0, 25)}...
+                    </button>
+                  ))}
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                 <span style={{ fontSize: '11px', color: '#64748b' }}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                 <button onClick={saveJournal} style={{ ...btnPrimary, padding: '8px 14px', fontSize: '12px' }}>Save</button>
@@ -776,9 +849,21 @@ export default function Home() {
             </div>
             
             {projects.length === 0 ? (
-              <div onClick={() => setActiveModal('addProject')} style={{ ...cardHover, padding: '24px', textAlign: 'center', border: '2px dashed rgba(255,255,255,0.1)' }}>
-                <div style={{ fontSize: '28px', marginBottom: '8px' }}>📋</div>
-                <div style={{ fontSize: '13px', color: '#64748b' }}>Add a project</div>
+              <div style={{ ...card, padding: '14px', border: '1px solid rgba(245,158,11,0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px' }}>📋</span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#fbbf24' }}>Project Ideas</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  {projectIdeas.map((p, i) => (
+                    <div key={i} onClick={() => { setNewProject({ name: p.name, desc: p.desc, icon: p.icon, color: p.color, status: 'planning' }); setActiveModal('addProject'); }} style={{ ...cardHover, padding: '10px', backgroundColor: 'rgba(245,158,11,0.05)', borderColor: 'rgba(245,158,11,0.15)' }}>
+                      <div style={{ fontSize: '16px', marginBottom: '4px' }}>{p.icon}</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600 }}>{p.name}</div>
+                      <div style={{ fontSize: '9px', color: '#64748b' }}>{p.desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setActiveModal('addProject')} style={{ ...btnSecondary, width: '100%', marginTop: '8px', fontSize: '10px', padding: '6px' }}>+ Custom Project</button>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
