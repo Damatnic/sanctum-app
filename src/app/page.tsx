@@ -160,6 +160,17 @@ export default function Home() {
   const [settings, setSettings] = useState({ name: '', city: '', apiKey: '' });
   const [journalInput, setJournalInput] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -236,6 +247,7 @@ export default function Home() {
       }
       
       setIsLoaded(true);
+      setIsLoading(false);
     }
     loadData();
   }, []);
@@ -578,12 +590,32 @@ export default function Home() {
   const label = { fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '6px', display: 'block', textTransform: 'uppercase' as const, letterSpacing: '0.5px' };
   const sectionTitle = { fontSize: '11px', fontWeight: 700, color: '#475569', letterSpacing: '1px', textTransform: 'uppercase' as const };
 
-  if (!isLoaded) return <div style={{ minHeight: '100vh', backgroundColor: '#080810' }} />;
+  if (!isLoaded) return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#080810', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', animation: 'pulse 2s infinite' }}>🏛️</div>
+      <div style={{ color: '#64748b', fontSize: '14px' }}>Loading Sanctum...</div>
+      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#080810', color: '#e2e8f0', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '56px', backgroundColor: '#0a0a14', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 16px', zIndex: 60 }}>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: '#e2e8f0', fontSize: '18px', cursor: 'pointer' }}>☰</button>
+          <span style={{ marginLeft: '12px', fontSize: '16px', fontWeight: 700, background: 'linear-gradient(90deg, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Sanctum</span>
+          {isLoading && <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#7c3aed' }}>Syncing...</span>}
+        </div>
+      )}
+      
+      {/* Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 65 }} />
+      )}
+      
       {/* Sidebar */}
-      <aside style={{ width: '220px', backgroundColor: '#0a0a14', borderRight: '1px solid rgba(255,255,255,0.06)', position: 'fixed', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <aside style={{ width: '220px', backgroundColor: '#0a0a14', borderRight: '1px solid rgba(255,255,255,0.06)', position: 'fixed', height: '100vh', display: isMobile && !sidebarOpen ? 'none' : 'flex', flexDirection: 'column', zIndex: 70, transform: isMobile ? 'translateX(0)' : undefined }}>
         <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🏛️</div>
           <span style={{ fontSize: '18px', fontWeight: 800, background: 'linear-gradient(90deg, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Sanctum</span>
@@ -615,7 +647,7 @@ export default function Home() {
       </aside>
 
       {/* Main */}
-      <main style={{ marginLeft: '220px', padding: '24px 32px', flex: 1, maxWidth: '1400px' }}>
+      <main style={{ marginLeft: isMobile ? 0 : '220px', padding: isMobile ? '72px 16px 24px' : '24px 32px', flex: 1, maxWidth: '1400px' }}>
         {/* Header */}
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
@@ -630,7 +662,7 @@ export default function Home() {
         </header>
 
         {/* Weather + Quote */}
-        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px 1fr', gap: '20px', marginBottom: '24px' }}>
           <div style={{ ...card, padding: '16px' }}>
             <div style={sectionTitle}>Weather</div>
             {weather ? (
@@ -699,7 +731,7 @@ export default function Home() {
         </section>
 
         {/* Goals + Timer */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: '24px', marginBottom: '24px' }}>
           <section>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <span style={sectionTitle}>Goals</span>
@@ -771,7 +803,7 @@ export default function Home() {
         </div>
 
         {/* Mood + Journal */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
           <section>
             <div style={{ marginBottom: '12px' }}><span style={sectionTitle}>How are you feeling?</span></div>
             <div style={{ ...card, padding: '14px' }}>
@@ -808,7 +840,7 @@ export default function Home() {
         </div>
 
         {/* Deadlines + Projects */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '24px' }}>
           <section>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <span style={sectionTitle}>Deadlines</span>
@@ -854,7 +886,7 @@ export default function Home() {
                   <span style={{ fontSize: '12px' }}>📋</span>
                   <span style={{ fontSize: '11px', fontWeight: 600, color: '#fbbf24' }}>Project Ideas</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '6px' }}>
                   {projectIdeas.map((p, i) => (
                     <div key={i} onClick={() => { setNewProject({ name: p.name, desc: p.desc, icon: p.icon, color: p.color, status: 'planning' }); setActiveModal('addProject'); }} style={{ ...cardHover, padding: '10px', backgroundColor: 'rgba(245,158,11,0.05)', borderColor: 'rgba(245,158,11,0.15)' }}>
                       <div style={{ fontSize: '16px', marginBottom: '4px' }}>{p.icon}</div>
@@ -866,7 +898,7 @@ export default function Home() {
                 <button onClick={() => setActiveModal('addProject')} style={{ ...btnSecondary, width: '100%', marginTop: '8px', fontSize: '10px', padding: '6px' }}>+ Custom Project</button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px' }}>
                 {projects.slice(0, 4).map(p => {
                   const colors: Record<string, string> = { violet: '#7c3aed', cyan: '#06b6d4', amber: '#f59e0b', emerald: '#10b981', rose: '#f43f5e', blue: '#3b82f6' };
                   const statusColors: Record<string, string> = { active: '#10b981', planning: '#3b82f6', paused: '#f59e0b', complete: '#7c3aed' };
@@ -954,7 +986,7 @@ export default function Home() {
       {activeModal === 'editGoal' && editItem && (
         <Modal title="Edit Goal" onClose={() => { setActiveModal(null); setEditItem(null); }}>
           <Field label="Goal"><input value={editItem.name} onChange={e => setEditItem({ ...editItem, name: e.target.value })} style={input} /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
             <Field label="Current"><input type="number" value={editItem.current} onChange={e => setEditItem({ ...editItem, current: parseInt(e.target.value) || 0 })} style={input} /></Field>
             <Field label="Target"><input type="number" value={editItem.target} onChange={e => setEditItem({ ...editItem, target: parseInt(e.target.value) || 1 })} style={input} /></Field>
           </div>
@@ -985,7 +1017,7 @@ export default function Home() {
         <Modal title="Add Project" onClose={() => setActiveModal(null)}>
           <Field label="Name"><input value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })} style={input} placeholder="Website Redesign" /></Field>
           <Field label="Description"><input value={newProject.desc} onChange={e => setNewProject({ ...newProject, desc: e.target.value })} style={input} placeholder="Short description" /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
             <Field label="Icon"><input value={newProject.icon} onChange={e => setNewProject({ ...newProject, icon: e.target.value })} style={input} placeholder="📁" maxLength={2} /></Field>
             <Field label="Color"><select value={newProject.color} onChange={e => setNewProject({ ...newProject, color: e.target.value })} style={input}><option value="violet">Violet</option><option value="cyan">Cyan</option><option value="amber">Amber</option><option value="emerald">Emerald</option><option value="rose">Rose</option><option value="blue">Blue</option></select></Field>
           </div>
@@ -998,7 +1030,7 @@ export default function Home() {
         <Modal title="Edit Project" onClose={() => { setActiveModal(null); setEditItem(null); }}>
           <Field label="Name"><input value={editItem.name} onChange={e => setEditItem({ ...editItem, name: e.target.value })} style={input} /></Field>
           <Field label="Description"><input value={editItem.desc} onChange={e => setEditItem({ ...editItem, desc: e.target.value })} style={input} /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
             <Field label="Icon"><input value={editItem.icon} onChange={e => setEditItem({ ...editItem, icon: e.target.value })} style={input} maxLength={2} /></Field>
             <Field label="Color"><select value={editItem.color} onChange={e => setEditItem({ ...editItem, color: e.target.value })} style={input}><option value="violet">Violet</option><option value="cyan">Cyan</option><option value="amber">Amber</option><option value="emerald">Emerald</option><option value="rose">Rose</option><option value="blue">Blue</option></select></Field>
           </div>
