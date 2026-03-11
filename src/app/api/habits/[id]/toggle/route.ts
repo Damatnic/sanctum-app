@@ -1,39 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { DEFAULT_USER_ID } from '@/lib/user'
+import { handlePrismaError, notFound, forbidden } from '@/lib/api-errors'
 import type { HabitCompletion } from '@prisma/client'
 
 // Calculate streak based on completions
 function calculateStreak(completions: Date[]): number {
   if (completions.length === 0) return 0
-  
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  
+
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
-  
+
   // Sort completions descending
   const sorted = completions
-    .map(d => { const date = new Date(d); date.setHours(0, 0, 0, 0); return date })
+    .map(d => {
+      const date = new Date(d)
+      date.setHours(0, 0, 0, 0)
+      return date
+    })
     .sort((a, b) => b.getTime() - a.getTime())
-  
+
   // Check if most recent is today or yesterday
   const mostRecent = sorted[0]
-  if (mostRecent.getTime() !== today.getTime() && mostRecent.getTime() !== yesterday.getTime()) {
+  if (
+    mostRecent.getTime() !== today.getTime() &&
+    mostRecent.getTime() !== yesterday.getTime()
+  ) {
     return 0
   }
-  
-  // Count consecutive days
+
+  // Count consecutive days (Math.round handles DST transitions where diff is 23 or 25 hours)
   let streak = 1
   for (let i = 1; i < sorted.length; i++) {
-    const diff = (sorted[i-1].getTime() - sorted[i].getTime()) / (1000 * 60 * 60 * 24)
+    const diff = Math.round((sorted[i - 1].getTime() - sorted[i].getTime()) / (1000 * 60 * 60 * 24))
     if (diff === 1) {
       streak++
     } else {
       break
     }
   }
-  
+
   return streak
 }
 
@@ -44,20 +53,28 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    
+    const userId = request.headers.get('x-user-id') || DEFAULT_USER_ID
+
+    // Ownership check
+    const habit = await prisma.habit.findUnique({ where: { id } })
+    if (!habit) return notFound('Habit')
+    if (habit.userId !== userId) return forbidden()
+
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
-    // Check if already completed today
-    const existing = await prisma.habitCompletion.findFirst({
+
+    // Use findUnique with compound key (habitId + date are @@unique in schema)
+    const existing = await prisma.habitCompletion.findUnique({
       where: {
-        habitId: id,
-        date: today
-      }
+        habitId_date: {
+          habitId: id,
+          date: today,
+        },
+      },
     })
-    
+
     let todayCompleted: boolean
-    
+
     if (existing) {
       // Remove completion
       await prisma.habitCompletion.delete({ where: { id: existing.id } })
@@ -67,50 +84,46 @@ export async function POST(
       await prisma.habitCompletion.create({
         data: {
           habitId: id,
-          date: today
-        }
+          date: today,
+        },
       })
       todayCompleted = true
     }
-    
-    // Recalculate streak
+
+    // Recalculate streak from all completions
     const completions = await prisma.habitCompletion.findMany({
       where: { habitId: id },
-      orderBy: { date: 'desc' }
+      orderBy: { date: 'desc' },
     })
-    
+
     const streak = calculateStreak(completions.map((c: HabitCompletion) => c.date))
-    
-    // Update habit with new streak
-    const habit = await prisma.habit.update({
+
+    // FIX: Single update with correct longestStreak using Math.max to never regress it.
+    // The previous code had a bug: it first set longestStreak = streak (overwriting the old
+    // longest), then compared streak > habit.longestStreak which was now always false.
+    const newLongestStreak = Math.max(streak, habit.longestStreak)
+
+    const updated = await prisma.habit.update({
       where: { id },
       data: {
         streak,
-        longestStreak: {
-          set: streak // Will be max'd in a moment
-        }
-      }
+        longestStreak: newLongestStreak,
+      },
     })
-    
-    // Update longest streak if needed
-    if (streak > habit.longestStreak) {
-      await prisma.habit.update({
-        where: { id },
-        data: { longestStreak: streak }
-      })
-    }
-    
+
     return NextResponse.json({
-      id: habit.id,
-      name: habit.name,
-      icon: habit.icon,
-      streak,
-      longestStreak: Math.max(streak, habit.longestStreak),
+      id: updated.id,
+      name: updated.name,
+      icon: updated.icon,
+      streak: updated.streak,
+      longestStreak: updated.longestStreak,
       todayCompleted,
-      completions: completions.map((c: HabitCompletion) => c.date.toISOString().split('T')[0])
+      completions: completions.map((c: HabitCompletion) => c.date.toISOString().split('T')[0]),
     })
   } catch (error) {
     console.error('POST /api/habits/[id]/toggle error:', error)
+    const prismaErr = handlePrismaError(error)
+    if (prismaErr) return prismaErr
     return NextResponse.json({ error: 'Failed to toggle habit' }, { status: 500 })
   }
 }

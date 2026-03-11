@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { habitsApi, goalsApi, deadlinesApi, projectsApi, journalsApi, focusApi, moodsApi, settingsApi, statsApi, exportApi, syncFromApi } from '@/lib/api';
 
@@ -303,14 +303,22 @@ export default function Home() {
     loadData();
   }, []);
 
-  // Save data
+  // Save data — debounced to avoid hammering localStorage on rapid state changes
+  // (e.g. timer ticks, typing in journal input, etc.)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!isLoaded) return;
-    const data: SanctumData = {
-      version: DATA_VERSION,
-      habits, goals, deadlines, projects, journal, mood, quoteIndex, focusMinutes, totalFocusSessions, settings
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const data: SanctumData = {
+        version: DATA_VERSION,
+        habits, goals, deadlines, projects, journal, mood, quoteIndex, focusMinutes, totalFocusSessions, settings
+      };
+      localStorage.setItem('sanctum-v2', JSON.stringify(data));
+    }, 500); // Batch saves within 500ms window
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-    localStorage.setItem('sanctum-v2', JSON.stringify(data));
   }, [habits, goals, deadlines, projects, journal, mood, quoteIndex, focusMinutes, totalFocusSessions, settings, isLoaded]);
 
   // Weather
@@ -362,10 +370,10 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const showToast = (icon: string, text: string) => {
+  const showToast = useCallback((icon: string, text: string) => {
     setToast({ show: true, icon, text });
     setTimeout(() => setToast({ show: false, icon: '', text: '' }), 3000);
-  };
+  }, []);
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -377,7 +385,7 @@ export default function Home() {
   const formatTimer = () => `${Math.floor(timerSeconds / 60).toString().padStart(2, '0')}:${(timerSeconds % 60).toString().padStart(2, '0')}`;
 
   // HABITS
-  const toggleHabit = async (id: string) => {
+  const toggleHabit = useCallback(async (id: string) => {
     const habit = habits.find(h => h.id === id);
     if (!habit) return;
     
@@ -406,7 +414,7 @@ export default function Home() {
         completions: result.data.completions
       } : h));
     }
-  };
+  }, [habits, showToast]);
 
   const addHabit = async () => {
     if (!newHabit.name.trim()) return;
@@ -460,7 +468,7 @@ export default function Home() {
     }
   };
 
-  const incrementGoal = async (id: string, amt: number) => {
+  const incrementGoal = useCallback(async (id: string, amt: number) => {
     const goal = goals.find(g => g.id === id);
     if (!goal) return;
     
@@ -474,7 +482,7 @@ export default function Home() {
     }
     
     await goalsApi.increment(id, amt);
-  };
+  }, [goals, showToast]);
 
   const saveGoal = async () => {
     if (!editItem) return;
@@ -611,7 +619,7 @@ export default function Home() {
   };
 
   // AI
-  const sendChat = async () => {
+  const sendChat = useCallback(async () => {
     if (!chatInput.trim()) return;
     const msg = chatInput;
     setChatInput('');
@@ -624,13 +632,19 @@ export default function Home() {
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.error ? `⚠️ ${data.error}` : data.reply }]);
     } catch { setChatMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Error' }]); }
     setChatLoading(false);
-  };
+  }, [chatInput, habits, mood, settings.apiKey]);
 
-  // Stats
-  const todayHabits = habits.filter(h => h.todayCompleted).length;
-  const avgGoals = goals.length ? Math.round(goals.reduce((s, g) => s + (g.current / g.target) * 100, 0) / goals.length) : 0;
-  const maxStreak = habits.length ? Math.max(...habits.map(h => h.streak)) : 0;
-  const quote = quotes[quoteIndex % quotes.length];
+  // Stats — memoized so they only recompute when their dependencies change
+  const todayHabits = useMemo(() => habits.filter(h => h.todayCompleted).length, [habits]);
+  const avgGoals = useMemo(() =>
+    goals.length ? Math.round(goals.reduce((s, g) => s + (g.current / g.target) * 100, 0) / goals.length) : 0,
+    [goals]
+  );
+  const maxStreak = useMemo(() =>
+    habits.length ? Math.max(...habits.map(h => h.streak)) : 0,
+    [habits]
+  );
+  const quote = useMemo(() => quotes[quoteIndex % quotes.length], [quoteIndex]);
 
   // Styles
   const card = { backgroundColor: '#0d0d1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px' };
@@ -705,12 +719,14 @@ export default function Home() {
             <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0 }}>{getGreeting()}, {settings.name || 'there'}.</h1>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0' }}>{formatDate()}</p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <Pill icon="✓" value={habits.length ? `${todayHabits}/${habits.length}` : '—'} label="habits" color="#10b981" />
-            <Pill icon="🎯" value={goals.length ? `${avgGoals}%` : '—'} label="goals" color="#7c3aed" />
-            {weeklyStats && <Pill icon="📈" value={`${weeklyStats.habitCompletions}`} label="this week" color="#f59e0b" />}
-            <Pill icon="⏱️" value={focusMinutes ? `${focusMinutes}m` : '—'} label="focus" color="#06b6d4" />
-          </div>
+          {!isMobile && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <Pill icon="✓" value={habits.length ? `${todayHabits}/${habits.length}` : '—'} label="habits" color="#10b981" />
+              <Pill icon="🎯" value={goals.length ? `${avgGoals}%` : '—'} label="goals" color="#7c3aed" />
+              {weeklyStats && <Pill icon="📈" value={`${weeklyStats.habitCompletions}`} label="wk" color="#f59e0b" />}
+              <Pill icon="⏱️" value={focusMinutes ? `${focusMinutes}m` : '—'} label="focus" color="#06b6d4" />
+            </div>
+          )}
         </header>
 
         {/* Weather + Quote */}
@@ -1011,7 +1027,7 @@ export default function Home() {
 
       {/* AI Chat */}
       {chatOpen && (
-        <div style={{ position: 'fixed', bottom: '90px', right: '24px', width: '360px', backgroundColor: '#0d0d1a', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '14px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', flexDirection: 'column', maxHeight: '450px' }}>
+        <div style={{ position: 'fixed', bottom: '90px', right: isMobile ? '8px' : '24px', left: isMobile ? '8px' : 'auto', width: isMobile ? 'auto' : '360px', backgroundColor: '#0d0d1a', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '14px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', flexDirection: 'column', maxHeight: '450px' }}>
           <div style={{ padding: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>✨</div>
             <div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: '14px' }}>AI Coach</div><div style={{ fontSize: '11px', color: '#64748b' }}>Your motivation partner</div></div>

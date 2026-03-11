@@ -3,7 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const { message, context, apiKey } = await request.json();
-    
+
+    // Validate message
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return NextResponse.json({ error: 'message is required' }, { status: 400 });
+    }
+    if (message.length > 4000) {
+      return NextResponse.json({ error: 'message must be 4000 characters or fewer' }, { status: 400 });
+    }
+
     // Use provided API key or fall back to env variable
     const key = apiKey || process.env.OPENAI_API_KEY;
     

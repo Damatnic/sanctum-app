@@ -35,8 +35,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { mood } = body
     
-    if (!mood) {
-      return NextResponse.json({ error: 'Mood is required' }, { status: 400 })
+    if (!mood || typeof mood !== 'string' || !mood.trim()) {
+      return NextResponse.json({ error: 'Mood is required and must be a string' }, { status: 400 })
+    }
+    // Limit mood string length to prevent abuse
+    if (mood.length > 50) {
+      return NextResponse.json({ error: 'Mood must be 50 characters or fewer' }, { status: 400 })
     }
     
     const today = new Date()

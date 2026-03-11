@@ -2,6 +2,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// NOTE: In Prisma 7+, the connection URL is configured in prisma.config.ts
+// (datasource.url), not here. The prisma.config.ts in this project already
+// points to DATABASE_URL. The PrismaClient itself receives the connection
+// via the pg Pool adapter in src/lib/prisma.ts.
 datasource db {
   provider = "postgresql"
 }
@@ -13,20 +17,20 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  habits    Habit[]
-  goals     Goal[]
-  deadlines Deadline[]
-  projects  Project[]
-  journals  JournalEntry[]
+  habits        Habit[]
+  goals         Goal[]
+  deadlines     Deadline[]
+  projects      Project[]
+  journals      JournalEntry[]
   focusSessions FocusSession[]
-  moodLogs  MoodLog[]
+  moodLogs      MoodLog[]
 }
 
 model Habit {
   id            String   @id @default(cuid())
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   name          String
   icon          String   @default("✓")
   streak        Int      @default(0)
@@ -35,25 +39,29 @@ model Habit {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  completions   HabitCompletion[]
+  completions HabitCompletion[]
+
+  @@index([userId, archived])
+  @@index([userId, createdAt])
 }
 
 model HabitCompletion {
   id        String   @id @default(cuid())
   habitId   String
   habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  
+
   date      DateTime @db.Date
   createdAt DateTime @default(now())
 
   @@unique([habitId, date])
+  @@index([habitId, date])
 }
 
 model Goal {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   name      String
   icon      String   @default("🎯")
   current   Int      @default(0)
@@ -64,25 +72,30 @@ model Goal {
   updatedAt DateTime @updatedAt
 
   milestones GoalMilestone[]
+
+  @@index([userId, archived])
+  @@index([userId, createdAt])
 }
 
 model GoalMilestone {
   id        String   @id @default(cuid())
   goalId    String
   goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  
+
   value     Int
   label     String?
-  reached   Boolean  @default(false)
+  reached   Boolean   @default(false)
   reachedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+
+  @@index([goalId])
 }
 
 model Deadline {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   title     String
   course    String?
   dueDate   DateTime @db.Date
@@ -90,13 +103,16 @@ model Deadline {
   archived  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, archived])
+  @@index([userId, dueDate])
 }
 
 model Project {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   name      String
   desc      String?
   icon      String   @default("📁")
@@ -105,38 +121,47 @@ model Project {
   archived  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, archived])
+  @@index([userId, status])
 }
 
 model JournalEntry {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   text      String
   mood      String?
   archived  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, archived])
+  @@index([userId, createdAt])
 }
 
 model FocusSession {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   minutes   Int
   completed Boolean  @default(true)
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model MoodLog {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   mood      String
   date      DateTime @db.Date
   createdAt DateTime @default(now())
 
   @@unique([userId, date])
+  @@index([userId, date])
 }

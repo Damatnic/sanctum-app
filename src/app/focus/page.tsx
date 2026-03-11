@@ -38,10 +38,11 @@ const navItems = [
   { href: '/deadlines', label: '📅 Deadlines' },
 ];
 
-function Sidebar({ maxStreak }: { maxStreak: number }) {
+function Sidebar({ maxStreak, isOpen, isMobile }: { maxStreak: number; isOpen?: boolean; isMobile?: boolean }) {
   const pathname = usePathname();
+  if (isMobile && !isOpen) return null;
   return (
-    <aside style={{ width: '220px', backgroundColor: '#0a0a14', borderRight: '1px solid rgba(255,255,255,0.06)', position: 'fixed', height: '100vh', display: 'flex', flexDirection: 'column', top: 0, left: 0, zIndex: 10 }}>
+    <aside style={{ width: '220px', backgroundColor: '#0a0a14', borderRight: '1px solid rgba(255,255,255,0.06)', position: 'fixed', height: '100vh', display: 'flex', flexDirection: 'column', top: 0, left: 0, zIndex: 70 }}>
       <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🏛️</div>
         <span style={{ fontSize: '18px', fontWeight: 800, background: 'linear-gradient(90deg, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Sanctum</span>
@@ -79,6 +80,15 @@ export default function FocusPage() {
   const [timerPreset, setTimerPreset] = useState(25);
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [toast, setToast] = useState({ show: false, text: '' });
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const card = { backgroundColor: '#0d0d1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px' };
   const btnPrimary = { backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 16px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' };
@@ -113,7 +123,7 @@ export default function FocusPage() {
 
   useEffect(() => { loadData(); }, []);
 
-  // Timer
+  // Timer — uses functional state updates to avoid stale closures
   useEffect(() => {
     if (!timerRunning || timerSeconds <= 0) return;
     const interval = setInterval(() => {
@@ -126,13 +136,18 @@ export default function FocusPage() {
             minutes: timerPreset,
             completedAt: new Date().toISOString(),
           };
+          // Use functional updates to avoid stale closures for focusMinutes & totalFocusSessions
           setFocusSessions(prev => {
             const updated = [newSession, ...prev].slice(0, 50);
-            const newMinutes = focusMinutes + timerPreset;
-            const newTotal = totalFocusSessions + 1;
-            setFocusMinutes(newMinutes);
-            setTotalFocusSessions(newTotal);
-            saveData(updated, newMinutes, newTotal);
+            setFocusMinutes(m => {
+              const newMinutes = m + timerPreset;
+              setTotalFocusSessions(n => {
+                const newTotal = n + 1;
+                saveData(updated, newMinutes, newTotal);
+                return newTotal;
+              });
+              return newMinutes;
+            });
             return updated;
           });
           setSessionCompleted(true);
@@ -145,6 +160,18 @@ export default function FocusPage() {
     }, 1000);
     return () => clearInterval(interval);
   }, [timerRunning, timerPreset]);
+
+  // Keyboard: Space to start/pause
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === ' ' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        e.preventDefault();
+        setTimerRunning(r => !r);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const showToast = (text: string) => {
     setToast({ show: true, text });
@@ -190,14 +217,23 @@ export default function FocusPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#080810', color: '#e2e8f0', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <Sidebar maxStreak={maxStreak} />
-      <main style={{ marginLeft: '220px', padding: '32px', flex: 1 }}>
+      {isMobile && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '56px', backgroundColor: '#0a0a14', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 16px', zIndex: 60 }}>
+          <button onClick={() => setSidebarOpen(o => !o)} style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: '#e2e8f0', fontSize: '18px', cursor: 'pointer' }}>☰</button>
+          <span style={{ marginLeft: '12px', fontSize: '16px', fontWeight: 700, background: 'linear-gradient(90deg, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Sanctum</span>
+        </div>
+      )}
+      {isMobile && sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 65 }} />
+      )}
+      <Sidebar maxStreak={maxStreak} isOpen={sidebarOpen} isMobile={isMobile} />
+      <main style={{ marginLeft: isMobile ? 0 : '220px', padding: isMobile ? '72px 16px 24px' : '32px', flex: 1 }}>
         <div style={{ marginBottom: '32px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0 }}>Focus</h1>
           <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Deep work sessions for maximum productivity</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px', marginBottom: '28px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '28px', marginBottom: '28px' }}>
           {/* Timer */}
           <div style={{ ...card, padding: '40px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
             {sessionCompleted && (

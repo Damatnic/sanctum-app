@@ -38,7 +38,10 @@ export async function GET(request: NextRequest) {
       completions: habit.completions.map((c: HabitCompletion) => c.date.toISOString().split('T')[0])
     }))
     
-    return NextResponse.json(transformed)
+    const res = NextResponse.json(transformed)
+    // Short private cache — data changes infrequently; stale-while-revalidate avoids full reload
+    res.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=120')
+    return res
   } catch (error) {
     console.error('GET /api/habits error:', error)
     return NextResponse.json({ error: 'Failed to fetch habits' }, { status: 500 })
@@ -54,7 +57,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, icon } = body
     
-    if (!name) {
+    if (!name || typeof name !== 'string' || !name.trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
     
@@ -74,7 +77,7 @@ export async function POST(request: NextRequest) {
       longestStreak: 0,
       todayCompleted: false,
       completions: []
-    })
+    }, { status: 201 })
   } catch (error) {
     console.error('POST /api/habits error:', error)
     return NextResponse.json({ error: 'Failed to create habit' }, { status: 500 })

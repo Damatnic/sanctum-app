@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     else if (code <= 299) icon = '🌧️';
     else if (code >= 300) icon = '🌨️';
 
-    return NextResponse.json({
+    const weatherRes = NextResponse.json({
       current: {
         temp: current.temp_F,
         feelsLike: current.FeelsLikeF,
@@ -41,6 +41,9 @@ export async function GET(request: NextRequest) {
               parseInt(day.hourly[4].weatherCode) <= 122 ? '⛅' : '🌧️',
       })),
     });
+    // Cache weather responses for 10 minutes on the client (matches our polling interval)
+    weatherRes.headers.set('Cache-Control', 'private, max-age=600, stale-while-revalidate=1200')
+    return weatherRes;
   } catch (error) {
     console.error('Weather API error:', error);
     return NextResponse.json(

@@ -13,93 +13,115 @@ export async function GET(request: NextRequest) {
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     
-    // Get all habit completions for the month
-    const habitCompletions = await prisma.habitCompletion.findMany({
-      where: {
-        habit: { userId },
-        date: { gte: monthAgo }
-      },
-      include: { habit: true }
-    })
+    // Fetch all data for the month in parallel
+    const [habitCompletions, focusSessions, moodLogs] = await Promise.all([
+      // FIX: Removed `include: { habit: true }` — the habit relation was never
+      // used in this route but caused an unnecessary JOIN on every stats request.
+      prisma.habitCompletion.findMany({
+        where: {
+          habit: { userId },
+          date: { gte: monthAgo }
+        }
+      }),
+      prisma.focusSession.findMany({
+        where: {
+          userId,
+          createdAt: { gte: monthAgo }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.moodLog.findMany({
+        where: {
+          userId,
+          date: { gte: monthAgo }
+        },
+        orderBy: { date: 'desc' }
+      })
+    ])
     
-    // Get focus sessions for the month
-    const focusSessions = await prisma.focusSession.findMany({
-      where: {
-        userId,
-        createdAt: { gte: monthAgo }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-    
-    // Get mood logs for the month
-    const moodLogs = await prisma.moodLog.findMany({
-      where: {
-        userId,
-        date: { gte: monthAgo }
-      },
-      orderBy: { date: 'desc' }
-    })
-    
-    // Calculate daily stats for the last 30 days
+    // Build Maps for O(1) per-day lookups instead of O(n) filters per day
+    const habitCompletionsByDate = new Map<string, number>()
+    for (const c of habitCompletions as HabitCompletion[]) {
+      const dateStr = c.date.toISOString().split('T')[0]
+      habitCompletionsByDate.set(dateStr, (habitCompletionsByDate.get(dateStr) ?? 0) + 1)
+    }
+
+    const focusByDate = new Map<string, number>()
+    for (const s of focusSessions as FocusSession[]) {
+      const dateStr = s.createdAt.toISOString().split('T')[0]
+      focusByDate.set(dateStr, (focusByDate.get(dateStr) ?? 0) + s.minutes)
+    }
+
+    // Most recent mood per day (already ordered desc)
+    const moodByDate = new Map<string, string>()
+    for (const m of moodLogs as MoodLog[]) {
+      const dateStr = m.date.toISOString().split('T')[0]
+      if (!moodByDate.has(dateStr)) {
+        moodByDate.set(dateStr, m.mood)
+      }
+    }
+
+    // Build daily stats — O(30) with O(1) Map lookups instead of O(30×n)
     const dailyStats: { date: string; habits: number; focusMinutes: number; mood: string | null }[] = []
-    for (let i = 0; i < 30; i++) {
+    for (let i = 29; i >= 0; i--) {
       const date = new Date(now)
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
-      
-      const dayCompletions = habitCompletions.filter((c: HabitCompletion) => 
-        c.date.toISOString().split('T')[0] === dateStr
-      ).length
-      
-      const dayFocus = focusSessions
-        .filter((s: FocusSession) => s.createdAt.toISOString().split('T')[0] === dateStr)
-        .reduce((sum: number, s: FocusSession) => sum + s.minutes, 0)
-      
-      const dayMood = moodLogs.find((m: MoodLog) => 
-        m.date.toISOString().split('T')[0] === dateStr
-      )?.mood || null
-      
-      dailyStats.push({ date: dateStr, habits: dayCompletions, focusMinutes: dayFocus, mood: dayMood })
+      dailyStats.push({
+        date: dateStr,
+        habits: habitCompletionsByDate.get(dateStr) ?? 0,
+        focusMinutes: focusByDate.get(dateStr) ?? 0,
+        mood: moodByDate.get(dateStr) ?? null,
+      })
     }
-    
-    // Weekly summary
-    const weekCompletions = habitCompletions.filter((c: HabitCompletion) => c.date >= weekAgo).length
-    const weekFocus = focusSessions
-      .filter((s: FocusSession) => s.createdAt >= weekAgo)
-      .reduce((sum: number, s: FocusSession) => sum + s.minutes, 0)
-    const weekSessions = focusSessions.filter((s: FocusSession) => s.createdAt >= weekAgo).length
-    
-    // Monthly summary
-    const monthCompletions = habitCompletions.length
-    const monthFocus = focusSessions.reduce((sum: number, s: FocusSession) => sum + s.minutes, 0)
-    const monthSessions = focusSessions.length
-    
+
+    // Weekly / monthly summaries — single pass each
+    let weekCompletions = 0, weekFocusMinutes = 0, weekFocusSessions = 0
+    let monthCompletions = 0, monthFocusMinutes = 0
+
+    for (const c of habitCompletions as HabitCompletion[]) {
+      monthCompletions++
+      if (c.date >= weekAgo) weekCompletions++
+    }
+
+    for (const s of focusSessions as FocusSession[]) {
+      monthFocusMinutes += s.minutes
+      if (s.createdAt >= weekAgo) {
+        weekFocusMinutes += s.minutes
+        weekFocusSessions++
+      }
+    }
+
     // Focus session history (last 20)
-    const recentFocus = focusSessions.slice(0, 20).map((s: FocusSession) => ({
+    const recentFocus = (focusSessions as FocusSession[]).slice(0, 20).map(s => ({
       id: s.id,
       minutes: s.minutes,
       completed: s.completed,
       date: s.createdAt.toISOString()
     }))
-    
-    return NextResponse.json({
-      daily: dailyStats.reverse(),
+
+    const response = NextResponse.json({
+      daily: dailyStats,
       week: {
         habitCompletions: weekCompletions,
-        focusMinutes: weekFocus,
-        focusSessions: weekSessions,
+        focusMinutes: weekFocusMinutes,
+        focusSessions: weekFocusSessions,
       },
       month: {
         habitCompletions: monthCompletions,
-        focusMinutes: monthFocus,
-        focusSessions: monthSessions,
+        focusMinutes: monthFocusMinutes,
+        focusSessions: focusSessions.length,
       },
       recentFocus,
-      moodHistory: moodLogs.slice(0, 30).map((m: MoodLog) => ({
+      moodHistory: (moodLogs as MoodLog[]).slice(0, 30).map(m => ({
         date: m.date.toISOString().split('T')[0],
         mood: m.mood
       }))
     })
+
+    // Allow clients to cache stats for 60 seconds (stale-while-revalidate for 5 min)
+    response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300')
+    return response
   } catch (error) {
     console.error('GET /api/stats error:', error)
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })

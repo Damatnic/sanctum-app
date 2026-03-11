@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { text, mood } = body
     
-    if (!text) {
+    if (!text || typeof text !== 'string' || !text.trim()) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
     
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       text: journal.text,
       mood: journal.mood,
       createdAt: journal.createdAt.toISOString()
-    })
+    }, { status: 201 })
   } catch (error) {
     console.error('POST /api/journals error:', error)
     return NextResponse.json({ error: 'Failed to create journal' }, { status: 500 })
