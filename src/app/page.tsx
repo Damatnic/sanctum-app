@@ -104,24 +104,24 @@ export default function Home() {
   const [focusMinutes, setFocusMinutes] = useState(0);
   const [settings, setSettings] = useState({ name: 'Nick', city: 'Waukesha, WI', apiKey: '' });
   const [journalInput, setJournalInput] = useState('');
-  
+
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerPreset, setTimerPreset] = useState(25);
-  
+
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { role: 'assistant', content: "Hey Nick! I'm your AI coach. Ask me for motivation, productivity tips, or just vent. 🌙" }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  
+
   const [habitModal, setHabitModal] = useState(false);
   const [goalModal, setGoalModal] = useState(false);
   const [settingsModal, setSettingsModal] = useState(false);
   const [newHabit, setNewHabit] = useState({ name: '', icon: '' });
   const [newGoal, setNewGoal] = useState({ name: '', icon: '', target: '' });
-  
+
   const [toast, setToast] = useState({ show: false, icon: '', text: '' });
   const [confetti, setConfetti] = useState(false);
 
@@ -295,19 +295,32 @@ export default function Home() {
   const quote = quotes[quoteIndex % quotes.length];
 
   return (
-    <div className="flex min-h-screen">
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
-      <aside className="w-60 fixed h-screen flex flex-col z-50" style={{ backgroundColor: '#0b0b18', borderRight: '1px solid rgba(255,255,255,0.055)' }}>
-        <div className="p-5 flex items-center gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.055)' }}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>
+      <aside style={{
+        width: '240px',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 50,
+        backgroundColor: '#0b0b18',
+        borderRight: '1px solid rgba(255,255,255,0.055)'
+      }}>
+        {/* Logo */}
+        <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.055)' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', flexShrink: 0 }}>
             🏛️
           </div>
-          <span className="text-lg font-extrabold tracking-tight" style={{ background: 'linear-gradient(to right, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', background: 'linear-gradient(to right, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Sanctum
           </span>
         </div>
-        
-        <nav className="flex-1 p-3 flex flex-col gap-1">
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {[
             { icon: '📊', label: 'Dashboard', active: true },
             { icon: '✓', label: 'Habits' },
@@ -317,156 +330,202 @@ export default function Home() {
           ].map(item => (
             <button
               key={item.label}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '10px 12px',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left',
                 backgroundColor: item.active ? 'rgba(124,58,237,0.15)' : 'transparent',
                 color: item.active ? '#7c3aed' : '#64748b',
-                border: item.active ? '1px solid rgba(124,58,237,0.3)' : '1px solid transparent'
+                border: item.active ? '1px solid rgba(124,58,237,0.3)' : '1px solid transparent',
+                transition: 'all 0.2s'
               }}
             >
-              <span className="text-base">{item.icon}</span>
+              <span style={{ fontSize: '16px' }}>{item.icon}</span>
               <span>{item.label}</span>
             </button>
           ))}
-          
-          <div className="h-px my-3" style={{ backgroundColor: 'rgba(255,255,255,0.055)' }} />
-          <div className="text-xs font-bold tracking-widest uppercase px-3 py-2" style={{ color: '#475569' }}>Life</div>
-          
+
+          <div style={{ height: '1px', margin: '12px 0', backgroundColor: 'rgba(255,255,255,0.055)' }} />
+          <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', padding: '8px 12px', color: '#475569' }}>Life</div>
+
           {[
             { icon: '📋', label: 'Projects' },
             { icon: '📅', label: 'Deadlines' },
           ].map(item => (
             <button
               key={item.label}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
-              style={{ color: '#64748b' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '10px 12px',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left',
+                backgroundColor: 'transparent',
+                color: '#64748b',
+                border: '1px solid transparent',
+                transition: 'all 0.2s'
+              }}
             >
-              <span className="text-base">{item.icon}</span>
+              <span style={{ fontSize: '16px' }}>{item.icon}</span>
               <span>{item.label}</span>
             </button>
           ))}
-          
-          <div className="h-px my-3" style={{ backgroundColor: 'rgba(255,255,255,0.055)' }} />
+
+          <div style={{ height: '1px', margin: '12px 0', backgroundColor: 'rgba(255,255,255,0.055)' }} />
           <button
             onClick={() => setSettingsModal(true)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
-            style={{ color: '#64748b' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '10px 12px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              width: '100%',
+              textAlign: 'left',
+              backgroundColor: 'transparent',
+              color: '#64748b',
+              border: '1px solid transparent',
+              transition: 'all 0.2s'
+            }}
           >
             <span>⚙️</span>
             <span>Settings</span>
           </button>
         </nav>
 
-        <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.055)' }}>
-          <div className="rounded-xl p-4 text-center" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.1))', border: '1px solid rgba(245,158,11,0.2)' }}>
-            <div className="text-2xl animate-streak-flame">🔥</div>
-            <div className="text-3xl font-extrabold" style={{ color: '#f59e0b' }}>{maxStreak}</div>
-            <div className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#64748b' }}>Day Streak</div>
+        {/* Streak badge */}
+        <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.055)' }}>
+          <div style={{ borderRadius: '12px', padding: '16px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.1))', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <div className="animate-streak-flame" style={{ fontSize: '28px' }}>🔥</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#f59e0b' }}>{maxStreak}</div>
+            <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: '#64748b' }}>Day Streak</div>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-60 p-6 max-w-5xl">
+      <main style={{ marginLeft: '240px', flex: 1, padding: '24px', maxWidth: 'calc(100vw - 240px)', boxSizing: 'border-box' }}>
         {/* Header */}
-        <header className="flex items-center justify-between mb-6">
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
-            <h1 className="text-2xl font-bold">{getGreeting()}, {settings.name}.</h1>
-            <p className="text-sm" style={{ color: '#64748b' }}>{formatDate()}</p>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>{getGreeting()}, {settings.name}.</h1>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: 0, marginTop: '2px' }}>{formatDate()}</p>
           </div>
-          <div className="flex gap-3">
+          <div style={{ display: 'flex', gap: '12px' }}>
             <StatPill icon="✓" value={`${habitsComplete}/${habits.length}`} label="habits" color="#10b981" />
             <StatPill icon="🎯" value={`${goalsProgress}%`} label="goals" color="#7c3aed" />
             <StatPill icon="⏱️" value={`${focusMinutes}m`} label="focus" color="#06b6d4" />
           </div>
         </header>
 
-        {/* Weather + Quote */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="rounded-2xl p-4" style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
-            <div className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: '#475569' }}>Weather</div>
+        {/* Weather + Quote — 3-col grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px', marginBottom: '24px' }}>
+          {/* Weather */}
+          <div style={{ borderRadius: '16px', padding: '16px', backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', marginBottom: '12px' }}>Weather</div>
             {weather ? (
-              <div className="flex items-center gap-4">
-                <span className="text-4xl">{weather.current.icon}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <span style={{ fontSize: '40px' }}>{weather.current.icon}</span>
                 <div>
-                  <div className="text-2xl font-bold">{weather.current.temp}°F</div>
-                  <div className="text-xs" style={{ color: '#64748b' }}>Feels {weather.current.feelsLike}°</div>
-                  <div className="text-xs" style={{ color: '#94a3b8' }}>{weather.current.condition}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 700 }}>{weather.current.temp}°F</div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>Feels {weather.current.feelsLike}°</div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>{weather.current.condition}</div>
                 </div>
               </div>
-            ) : <div className="text-sm" style={{ color: '#64748b' }}>Loading...</div>}
+            ) : (
+              <div style={{ fontSize: '14px', color: '#64748b' }}>Loading weather...</div>
+            )}
           </div>
 
-          <div className="col-span-2 rounded-2xl p-5 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0b0b18, #08081a)', border: '1px solid rgba(124,58,237,0.3)' }}>
-            <span className="absolute -top-5 left-2 text-8xl font-black" style={{ color: 'rgba(124,58,237,0.08)' }}>"</span>
-            <p className="text-lg font-medium leading-relaxed mb-2 relative z-10">"{quote.text}"</p>
-            <p className="text-sm font-semibold" style={{ color: '#7c3aed' }}>— {quote.author}</p>
+          {/* Quote */}
+          <div style={{ borderRadius: '16px', padding: '20px', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0b0b18, #08081a)', border: '1px solid rgba(124,58,237,0.3)' }}>
+            <span style={{ position: 'absolute', top: '-20px', left: '8px', fontSize: '80px', fontWeight: 900, color: 'rgba(124,58,237,0.08)', lineHeight: 1 }}>"</span>
+            <p style={{ fontSize: '16px', fontWeight: 500, lineHeight: 1.6, marginBottom: '8px', position: 'relative', zIndex: 1 }}>"{quote.text}"</p>
+            <p style={{ fontSize: '14px', fontWeight: 600, color: '#7c3aed', margin: 0 }}>— {quote.author}</p>
             <button
               onClick={() => setQuoteIndex(i => i + 1)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:bg-violet-500/20"
-              style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#64748b' }}
+              style={{ position: 'absolute', top: '16px', right: '16px', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.05)', color: '#64748b', border: 'none', fontSize: '16px' }}
             >↻</button>
           </div>
         </div>
 
         {/* Habits */}
-        <section className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#475569' }}>Today's Habits</h2>
-            <button onClick={() => setHabitModal(true)} className="text-xs font-semibold transition-colors" style={{ color: '#7c3aed' }}>+ Add Habit</button>
+        <section style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', margin: 0 }}>Today&apos;s Habits</h2>
+            <button onClick={() => setHabitModal(true)} style={{ fontSize: '12px', fontWeight: 600, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer' }}>+ Add Habit</button>
           </div>
-          <div className="grid grid-cols-6 gap-3">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
             {habits.map(h => (
               <div
                 key={h.id}
                 onClick={() => toggleHabit(h.id)}
-                className="relative rounded-xl p-4 cursor-pointer transition-all hover:-translate-y-0.5"
                 style={{
+                  position: 'relative',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  cursor: 'pointer',
+                  transition: 'transform 0.15s',
                   backgroundColor: h.completedToday ? 'rgba(16,185,129,0.05)' : '#0b0b18',
                   border: h.completedToday ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.055)'
                 }}
               >
                 {h.completedToday && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white animate-check-pop" style={{ backgroundColor: '#10b981' }}>✓</div>
+                  <div className="animate-check-pop" style={{ position: 'absolute', top: '8px', right: '8px', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'white', backgroundColor: '#10b981' }}>✓</div>
                 )}
-                <div className="text-2xl mb-2">{h.icon}</div>
-                <div className="text-sm font-semibold truncate">{h.name}</div>
-                <div className="text-xs flex items-center gap-1 mt-1" style={{ color: '#f59e0b' }}>🔥 {h.streak}d</div>
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>{h.icon}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</div>
+                <div style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: '#f59e0b' }}>🔥 {h.streak}d</div>
               </div>
             ))}
             <div
               onClick={() => setHabitModal(true)}
-              className="rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:border-violet-500"
-              style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '2px dashed rgba(255,255,255,0.055)', color: '#475569', minHeight: '100px' }}
+              style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.02)', border: '2px dashed rgba(255,255,255,0.055)', color: '#475569', minHeight: '100px' }}
             >
-              <span className="text-2xl mb-1">+</span>
-              <span className="text-xs">Add</span>
+              <span style={{ fontSize: '24px', marginBottom: '4px' }}>+</span>
+              <span style={{ fontSize: '12px' }}>Add</span>
             </div>
           </div>
         </section>
 
         {/* Goals + Focus */}
-        <div className="grid grid-cols-5 gap-6 mb-6">
-          <section className="col-span-3">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#475569' }}>Active Goals</h2>
-              <button onClick={() => setGoalModal(true)} className="text-xs font-semibold" style={{ color: '#7c3aed' }}>+ Add Goal</button>
+        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px', marginBottom: '24px' }}>
+          {/* Goals */}
+          <section>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', margin: 0 }}>Active Goals</h2>
+              <button onClick={() => setGoalModal(true)} style={{ fontSize: '12px', fontWeight: 600, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer' }}>+ Add Goal</button>
             </div>
-            <div className="flex flex-col gap-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {goals.map(g => {
                 const pct = Math.round((g.current / g.target) * 100);
                 return (
-                  <div key={g.id} className="rounded-xl p-4 flex items-center gap-4 transition-all" style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ backgroundColor: 'rgba(124,58,237,0.15)' }}>{g.icon}</div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold mb-1.5">{g.name}</div>
-                      <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #7c3aed, #06b6d4)' }} />
+                  <div key={g.id} style={{ borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', backgroundColor: 'rgba(124,58,237,0.15)', flexShrink: 0 }}>{g.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '6px' }}>{g.name}</div>
+                      <div style={{ height: '6px', borderRadius: '9999px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                        <div style={{ height: '100%', borderRadius: '9999px', width: `${pct}%`, background: 'linear-gradient(90deg, #7c3aed, #06b6d4)', transition: 'width 0.5s' }} />
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold" style={{ color: '#7c3aed' }}>{pct}%</div>
-                      <div className="text-xs" style={{ color: '#475569' }}>{g.current}/{g.target}</div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#7c3aed' }}>{pct}%</div>
+                      <div style={{ fontSize: '12px', color: '#475569' }}>{g.current}/{g.target}</div>
                     </div>
                   </div>
                 );
@@ -474,36 +533,39 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#475569' }}>Focus Timer</h2>
+          {/* Focus Timer */}
+          <section>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', margin: 0 }}>Focus Timer</h2>
             </div>
-            <div className="rounded-xl p-6 text-center" style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
-              <div className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: '#475569' }}>
+            <div style={{ borderRadius: '12px', padding: '24px', textAlign: 'center', backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', marginBottom: '8px' }}>
                 {timerRunning ? 'FOCUSING...' : 'READY TO FOCUS'}
               </div>
-              <div className="text-5xl font-extrabold tabular-nums mb-4" style={{ background: 'linear-gradient(to right, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <div style={{ fontSize: '48px', fontWeight: 800, fontVariantNumeric: 'tabular-nums', marginBottom: '16px', background: 'linear-gradient(to right, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 {formatTimer()}
               </div>
-              <div className="flex justify-center gap-3 mb-4">
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
                 <button
                   onClick={() => setTimerRunning(r => !r)}
-                  className="px-6 py-2.5 rounded-xl font-semibold text-sm text-white transition-all hover:scale-105"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}
+                  style={{ padding: '10px 24px', borderRadius: '12px', fontWeight: 600, fontSize: '14px', color: 'white', cursor: 'pointer', border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', transition: 'transform 0.15s' }}
                 >{timerRunning ? 'Pause' : 'Start'}</button>
                 <button
                   onClick={() => { setTimerRunning(false); setTimerSeconds(timerPreset * 60); }}
-                  className="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.055)' }}
+                  style={{ padding: '10px 24px', borderRadius: '12px', fontWeight: 600, fontSize: '14px', cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.055)' }}
                 >Reset</button>
               </div>
-              <div className="flex justify-center gap-2">
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                 {[25, 45, 60].map(m => (
                   <button
                     key={m}
                     onClick={() => { setTimerPreset(m); setTimerSeconds(m * 60); }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                     style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
                       backgroundColor: timerPreset === m ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.03)',
                       color: timerPreset === m ? '#7c3aed' : '#64748b',
                       border: timerPreset === m ? '1px solid #7c3aed' : '1px solid rgba(255,255,255,0.055)'
@@ -516,13 +578,14 @@ export default function Home() {
         </div>
 
         {/* Mood + Journal */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+          {/* Mood */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#475569' }}>How are you feeling?</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', margin: 0 }}>How are you feeling?</h2>
             </div>
-            <div className="rounded-xl p-4" style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
-              <div className="flex justify-between gap-2">
+            <div style={{ borderRadius: '12px', padding: '16px', backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
                 {[
                   { key: 'great', emoji: '😄', label: 'Great' },
                   { key: 'good', emoji: '🙂', label: 'Good' },
@@ -533,86 +596,92 @@ export default function Home() {
                   <button
                     key={m.key}
                     onClick={() => selectMood(m.key)}
-                    className="flex-1 p-3 rounded-xl text-center transition-all hover:-translate-y-0.5"
                     style={{
+                      flex: 1,
+                      padding: '12px 4px',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
                       backgroundColor: mood === m.key ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.02)',
-                      border: mood === m.key ? '1px solid #7c3aed' : '1px solid rgba(255,255,255,0.055)'
+                      border: mood === m.key ? '1px solid #7c3aed' : '1px solid rgba(255,255,255,0.055)',
+                      transition: 'transform 0.15s'
                     }}
                   >
-                    <span className="text-2xl block mb-1">{m.emoji}</span>
-                    <span className="text-xs font-semibold" style={{ color: '#64748b' }}>{m.label}</span>
+                    <span style={{ fontSize: '24px', display: 'block', marginBottom: '4px' }}>{m.emoji}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>{m.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           </section>
 
+          {/* Journal */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#475569' }}>Quick Thought</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', margin: 0 }}>Quick Thought</h2>
             </div>
-            <div className="rounded-xl p-4" style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
+            <div style={{ borderRadius: '12px', padding: '16px', backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
               <textarea
                 value={journalInput}
                 onChange={e => setJournalInput(e.target.value)}
                 placeholder="What's on your mind?"
-                className="w-full rounded-xl p-3 text-sm resize-none h-20 focus:outline-none transition-colors"
-                style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.055)', color: '#cbd5e1' }}
+                style={{ width: '100%', borderRadius: '12px', padding: '12px', fontSize: '14px', resize: 'none', height: '80px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.055)', color: '#cbd5e1', boxSizing: 'border-box', fontFamily: 'inherit' }}
               />
-              <div className="flex justify-between items-center mt-3">
-                <span className="text-xs" style={{ color: '#475569' }}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                <button onClick={saveJournal} className="px-4 py-2 rounded-lg text-xs font-semibold text-white" style={{ backgroundColor: '#7c3aed' }}>Save</button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#475569' }}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                <button onClick={saveJournal} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: 'white', backgroundColor: '#7c3aed', border: 'none', cursor: 'pointer' }}>Save</button>
               </div>
             </div>
           </section>
         </div>
 
         {/* Deadlines + Projects */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+          {/* Deadlines */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#475569' }}>Upcoming Deadlines</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', margin: 0 }}>Upcoming Deadlines</h2>
             </div>
-            <div className="flex flex-col gap-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {deadlines.filter(d => !d.done).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()).slice(0, 5).map(d => {
                 const diff = Math.ceil((new Date(d.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                 const urgency = diff <= 1 ? 'urgent' : diff <= 3 ? 'soon' : 'ok';
-                const colors = { urgent: '#f43f5e', soon: '#f59e0b', ok: '#10b981' };
+                const colors: Record<string, string> = { urgent: '#f43f5e', soon: '#f59e0b', ok: '#10b981' };
                 const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `${diff}d`;
                 return (
                   <div
                     key={d.id}
-                    className="flex items-center gap-3 p-3 rounded-xl transition-all"
-                    style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)', borderLeft: `4px solid ${colors[urgency]}` }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px', backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)', borderLeft: `4px solid ${colors[urgency]}` }}
                   >
-                    <button onClick={() => toggleDeadline(d.id)} className="w-5 h-5 rounded flex-shrink-0" style={{ border: '2px solid rgba(255,255,255,0.055)' }} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold truncate">{d.title}</div>
-                      <div className="text-xs" style={{ color: '#475569' }}>{d.course}</div>
+                    <button onClick={() => toggleDeadline(d.id)} style={{ width: '20px', height: '20px', borderRadius: '4px', flexShrink: 0, backgroundColor: 'transparent', border: '2px solid rgba(255,255,255,0.055)', cursor: 'pointer' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title}</div>
+                      <div style={{ fontSize: '12px', color: '#475569' }}>{d.course}</div>
                     </div>
-                    <span className="text-xs font-bold px-2 py-1 rounded" style={{ backgroundColor: `${colors[urgency]}15`, color: colors[urgency] }}>{label}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 8px', borderRadius: '6px', backgroundColor: `${colors[urgency]}20`, color: colors[urgency], flexShrink: 0 }}>{label}</span>
                   </div>
                 );
               })}
             </div>
           </section>
 
+          {/* Projects */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#475569' }}>Projects</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569', margin: 0 }}>Projects</h2>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               {projects.slice(0, 4).map(p => {
                 const colorMap: Record<string, string> = { violet: '#7c3aed', cyan: '#06b6d4', amber: '#f59e0b', emerald: '#10b981' };
                 const statusColors: Record<string, string> = { active: '#10b981', paused: '#f59e0b', planning: '#3b82f6' };
                 return (
-                  <div key={p.name} className="rounded-xl p-4 transition-all" style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ backgroundColor: `${colorMap[p.color]}15` }}>{p.icon}</div>
-                      <span className="text-xs font-bold tracking-wider uppercase px-2 py-0.5 rounded" style={{ backgroundColor: `${statusColors[p.status]}15`, color: statusColors[p.status] }}>{p.status}</span>
+                  <div key={p.name} style={{ borderRadius: '12px', padding: '16px', backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', backgroundColor: `${colorMap[p.color]}20` }}>{p.icon}</div>
+                      <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '6px', backgroundColor: `${statusColors[p.status]}20`, color: statusColors[p.status] }}>{p.status}</span>
                     </div>
-                    <div className="text-sm font-semibold">{p.name}</div>
-                    <div className="text-xs truncate" style={{ color: '#64748b' }}>{p.desc}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600 }}>{p.name}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.desc}</div>
                   </div>
                 );
               })}
@@ -624,108 +693,125 @@ export default function Home() {
       {/* AI Coach FAB */}
       <button
         onClick={() => setChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-transform hover:scale-110 z-40"
-        style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)', boxShadow: '0 4px 20px rgba(124,58,237,0.4)' }}
+        style={{ position: 'fixed', bottom: '24px', right: '24px', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', cursor: 'pointer', zIndex: 40, border: 'none', background: 'linear-gradient(135deg, #7c3aed, #9333ea)', boxShadow: '0 4px 20px rgba(124,58,237,0.4)', transition: 'transform 0.2s' }}
       >🤖</button>
 
       {/* AI Coach Panel */}
       {chatOpen && (
-        <div className="fixed bottom-24 right-6 w-96 rounded-2xl shadow-2xl z-50 flex flex-col max-h-[500px] animate-scale-in" style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(124,58,237,0.3)' }}>
-          <div className="p-4 flex items-center gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.055)' }}>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>🤖</div>
-            <div className="flex-1">
-              <div className="font-semibold">Nyx AI Coach</div>
-              <div className="text-xs" style={{ color: '#64748b' }}>Your motivation partner</div>
+        <div className="animate-scale-in" style={{ position: 'fixed', bottom: '96px', right: '24px', width: '384px', borderRadius: '16px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', flexDirection: 'column', maxHeight: '500px', backgroundColor: '#0b0b18', border: '1px solid rgba(124,58,237,0.3)' }}>
+          <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.055)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', flexShrink: 0 }}>🤖</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600 }}>Nyx AI Coach</div>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>Your motivation partner</div>
             </div>
-            <button onClick={() => setChatOpen(false)} style={{ color: '#64748b' }}>✕</button>
+            <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '16px' }}>✕</button>
           </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 max-h-72">
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '288px' }}>
             {chatMessages.map((msg, i) => (
-              <div key={i} className="max-w-[85%] p-3 rounded-xl text-sm" style={{ backgroundColor: msg.role === 'user' ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)', marginLeft: msg.role === 'user' ? 'auto' : '0' }}>
+              <div key={i} style={{ maxWidth: '85%', padding: '12px', borderRadius: '12px', fontSize: '14px', backgroundColor: msg.role === 'user' ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)', marginLeft: msg.role === 'user' ? 'auto' : '0' }}>
                 {msg.content}
               </div>
             ))}
-            {chatLoading && <div className="p-3 rounded-xl text-sm animate-typing" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>Thinking...</div>}
+            {chatLoading && <div className="animate-typing" style={{ padding: '12px', borderRadius: '12px', fontSize: '14px', backgroundColor: 'rgba(255,255,255,0.05)' }}>Thinking...</div>}
           </div>
 
-          <div className="p-4 flex gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.055)' }}>
+          <div style={{ padding: '16px', display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.055)' }}>
             <input
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendChat()}
               placeholder="Ask for motivation..."
-              className="flex-1 rounded-xl px-4 py-2.5 text-sm focus:outline-none"
-              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }}
+              style={{ flex: 1, borderRadius: '12px', padding: '10px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', fontFamily: 'inherit' }}
             />
-            <button onClick={sendChat} disabled={chatLoading} className="px-4 py-2.5 rounded-xl font-semibold text-sm text-white disabled:opacity-50" style={{ backgroundColor: '#7c3aed' }}>➤</button>
+            <button onClick={sendChat} disabled={chatLoading} style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: 600, fontSize: '14px', color: 'white', backgroundColor: '#7c3aed', border: 'none', cursor: 'pointer', opacity: chatLoading ? 0.5 : 1 }}>➤</button>
           </div>
         </div>
       )}
 
-      {/* Modals */}
+      {/* Habit Modal */}
       {habitModal && <Modal title="Add New Habit" onClose={() => setHabitModal(false)}>
-        <div className="mb-4">
-          <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>Habit Name</label>
-          <input value={newHabit.name} onChange={e => setNewHabit({ ...newHabit, name: e.target.value })} placeholder="e.g., Morning workout" className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }} />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#64748b' }}>Habit Name</label>
+          <input value={newHabit.name} onChange={e => setNewHabit({ ...newHabit, name: e.target.value })} placeholder="e.g., Morning workout" style={{ width: '100%', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', boxSizing: 'border-box', fontFamily: 'inherit' }} />
         </div>
-        <div className="mb-6">
-          <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>Icon (emoji)</label>
-          <input value={newHabit.icon} onChange={e => setNewHabit({ ...newHabit, icon: e.target.value })} placeholder="e.g., 💪" maxLength={2} className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }} />
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#64748b' }}>Icon (emoji)</label>
+          <input value={newHabit.icon} onChange={e => setNewHabit({ ...newHabit, icon: e.target.value })} placeholder="e.g., 💪" maxLength={2} style={{ width: '100%', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', boxSizing: 'border-box', fontFamily: 'inherit' }} />
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => setHabitModal(false)} className="flex-1 py-3 rounded-xl font-semibold" style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>Cancel</button>
-          <button onClick={addHabit} className="flex-1 py-3 rounded-xl font-semibold text-white" style={{ backgroundColor: '#7c3aed' }}>Add Habit</button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => setHabitModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: 600, cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: 'none' }}>Cancel</button>
+          <button onClick={addHabit} style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: 600, color: 'white', cursor: 'pointer', backgroundColor: '#7c3aed', border: 'none' }}>Add Habit</button>
         </div>
       </Modal>}
 
+      {/* Goal Modal */}
       {goalModal && <Modal title="Add New Goal" onClose={() => setGoalModal(false)}>
-        <div className="mb-4">
-          <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>Goal</label>
-          <input value={newGoal.name} onChange={e => setNewGoal({ ...newGoal, name: e.target.value })} placeholder="e.g., Read 24 books" className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }} />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#64748b' }}>Goal</label>
+          <input value={newGoal.name} onChange={e => setNewGoal({ ...newGoal, name: e.target.value })} placeholder="e.g., Read 24 books" style={{ width: '100%', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', boxSizing: 'border-box', fontFamily: 'inherit' }} />
         </div>
-        <div className="mb-4">
-          <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>Target Number</label>
-          <input value={newGoal.target} onChange={e => setNewGoal({ ...newGoal, target: e.target.value })} placeholder="e.g., 24" type="number" className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }} />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#64748b' }}>Target Number</label>
+          <input value={newGoal.target} onChange={e => setNewGoal({ ...newGoal, target: e.target.value })} placeholder="e.g., 24" type="number" style={{ width: '100%', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', boxSizing: 'border-box', fontFamily: 'inherit' }} />
         </div>
-        <div className="mb-6">
-          <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>Icon (emoji)</label>
-          <input value={newGoal.icon} onChange={e => setNewGoal({ ...newGoal, icon: e.target.value })} placeholder="e.g., 📚" maxLength={2} className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }} />
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#64748b' }}>Icon (emoji)</label>
+          <input value={newGoal.icon} onChange={e => setNewGoal({ ...newGoal, icon: e.target.value })} placeholder="e.g., 📚" maxLength={2} style={{ width: '100%', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', boxSizing: 'border-box', fontFamily: 'inherit' }} />
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => setGoalModal(false)} className="flex-1 py-3 rounded-xl font-semibold" style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>Cancel</button>
-          <button onClick={addGoal} className="flex-1 py-3 rounded-xl font-semibold text-white" style={{ backgroundColor: '#7c3aed' }}>Add Goal</button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => setGoalModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: 600, cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: 'none' }}>Cancel</button>
+          <button onClick={addGoal} style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: 600, color: 'white', cursor: 'pointer', backgroundColor: '#7c3aed', border: 'none' }}>Add Goal</button>
         </div>
       </Modal>}
 
+      {/* Settings Modal */}
       {settingsModal && <Modal title="Settings" onClose={() => setSettingsModal(false)}>
-        <div className="mb-4">
-          <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>Your Name</label>
-          <input value={settings.name} onChange={e => setSettings({ ...settings, name: e.target.value })} className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }} />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#64748b' }}>Your Name</label>
+          <input value={settings.name} onChange={e => setSettings({ ...settings, name: e.target.value })} style={{ width: '100%', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', boxSizing: 'border-box', fontFamily: 'inherit' }} />
         </div>
-        <div className="mb-4">
-          <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>City (for weather)</label>
-          <input value={settings.city} onChange={e => setSettings({ ...settings, city: e.target.value })} className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }} />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#64748b' }}>City (for weather)</label>
+          <input value={settings.city} onChange={e => setSettings({ ...settings, city: e.target.value })} style={{ width: '100%', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', boxSizing: 'border-box', fontFamily: 'inherit' }} />
         </div>
-        <div className="mb-6">
-          <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>OpenAI API Key (for AI Coach)</label>
-          <input value={settings.apiKey} onChange={e => setSettings({ ...settings, apiKey: e.target.value })} type="password" placeholder="sk-..." className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9' }} />
-          <p className="text-xs mt-2" style={{ color: '#475569' }}>Required for AI coach. Get key from platform.openai.com</p>
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#64748b' }}>OpenAI API Key (for AI Coach)</label>
+          <input value={settings.apiKey} onChange={e => setSettings({ ...settings, apiKey: e.target.value })} type="password" placeholder="sk-..." style={{ width: '100%', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.055)', color: '#f1f5f9', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+          <p style={{ fontSize: '12px', marginTop: '8px', color: '#475569' }}>Required for AI coach. Get key from platform.openai.com</p>
         </div>
-        <button onClick={() => setSettingsModal(false)} className="w-full py-3 rounded-xl font-semibold text-white" style={{ backgroundColor: '#7c3aed' }}>Save Settings</button>
+        <button onClick={() => setSettingsModal(false)} style={{ width: '100%', padding: '12px', borderRadius: '12px', fontWeight: 600, color: 'white', cursor: 'pointer', backgroundColor: '#7c3aed', border: 'none' }}>Save Settings</button>
       </Modal>}
 
       {/* Toast */}
-      <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 rounded-xl px-5 py-3 flex items-center gap-3 shadow-2xl z-[100] transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'}`} style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(124,58,237,0.3)' }}>
-        <span className="text-xl">{toast.icon}</span>
-        <span className="text-sm font-medium">{toast.text}</span>
+      <div style={{
+        position: 'fixed',
+        bottom: '24px',
+        left: '50%',
+        transform: `translateX(-50%) translateY(${toast.show ? '0' : '16px'})`,
+        borderRadius: '12px',
+        padding: '12px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+        zIndex: 100,
+        opacity: toast.show ? 1 : 0,
+        pointerEvents: toast.show ? 'auto' : 'none',
+        transition: 'all 0.3s',
+        backgroundColor: '#0b0b18',
+        border: '1px solid rgba(124,58,237,0.3)'
+      }}>
+        <span style={{ fontSize: '20px' }}>{toast.icon}</span>
+        <span style={{ fontSize: '14px', fontWeight: 500 }}>{toast.text}</span>
       </div>
 
       {/* Confetti */}
       {confetti && (
-        <div className="fixed inset-0 pointer-events-none z-[200]">
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 200 }}>
           {Array.from({ length: 50 }).map((_, i) => (
-            <div key={i} className="absolute w-3 h-3" style={{ left: `${Math.random() * 100}%`, backgroundColor: ['#7c3aed', '#06b6d4', '#f59e0b', '#10b981', '#f43f5e'][Math.floor(Math.random() * 5)], animation: `confetti-fall ${2 + Math.random() * 2}s linear forwards`, animationDelay: `${Math.random() * 0.5}s` }} />
+            <div key={i} style={{ position: 'absolute', width: '12px', height: '12px', left: `${Math.random() * 100}%`, backgroundColor: ['#7c3aed', '#06b6d4', '#f59e0b', '#10b981', '#f43f5e'][Math.floor(Math.random() * 5)], animation: `confetti-fall ${2 + Math.random() * 2}s linear forwards`, animationDelay: `${Math.random() * 0.5}s` }} />
           ))}
         </div>
       )}
@@ -735,7 +821,7 @@ export default function Home() {
 
 function StatPill({ icon, value, label, color }: { icon: string; value: string; label: string; color: string }) {
   return (
-    <div className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold" style={{ backgroundColor: '#0b0b18', border: `1px solid ${color}33`, color }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '9999px', fontSize: '14px', fontWeight: 600, backgroundColor: '#0b0b18', border: `1px solid ${color}33`, color }}>
       <span>{icon}</span>
       <span>{value} {label}</span>
     </div>
@@ -744,11 +830,11 @@ function StatPill({ icon, value, label, color }: { icon: string; value: string; 
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
-      <div className="rounded-2xl p-6 w-full max-w-md animate-scale-in" style={{ backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold">{title}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#64748b' }}>✕</button>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+      <div className="animate-scale-in" style={{ borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '448px', backgroundColor: '#0b0b18', border: '1px solid rgba(255,255,255,0.055)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{title}</h3>
+          <button onClick={onClose} style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.05)', color: '#64748b', border: 'none', fontSize: '14px' }}>✕</button>
         </div>
         {children}
       </div>
