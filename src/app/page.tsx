@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { habitsApi, goalsApi, deadlinesApi, projectsApi, journalsApi, focusApi, moodsApi, syncFromApi } from '@/lib/api';
+import { habitsApi, goalsApi, deadlinesApi, projectsApi, journalsApi, focusApi, moodsApi, settingsApi, statsApi, exportApi, syncFromApi } from '@/lib/api';
 
 // IMPORTANT: Increment this when data structure changes to force reset
 const DATA_VERSION = 2;
@@ -193,6 +193,41 @@ export default function Home() {
   
   const [toast, setToast] = useState({ show: false, icon: '', text: '' });
   const [confetti, setConfetti] = useState(false);
+  const [weeklyStats, setWeeklyStats] = useState<{ habitCompletions: number; focusMinutes: number; focusSessions: number } | null>(null);
+  const [recentFocus, setRecentFocus] = useState<{ id: string; minutes: number; completed: boolean; date: string }[]>([]);
+
+  // Request notification permission on load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Check for upcoming deadlines and notify
+  useEffect(() => {
+    if (!deadlines.length || !('Notification' in window) || Notification.permission !== 'granted') return;
+    
+    const checkDeadlines = () => {
+      const now = new Date();
+      deadlines.filter(d => !d.done).forEach(d => {
+        const due = new Date(d.dueDate);
+        const hoursUntil = (due.getTime() - now.getTime()) / (1000 * 60 * 60);
+        if (hoursUntil > 0 && hoursUntil < 24) {
+          const notifKey = `notified-${d.id}`;
+          if (!sessionStorage.getItem(notifKey)) {
+            new Notification('📅 Deadline Approaching', {
+              body: `${d.title} is due in ${Math.round(hoursUntil)} hours`,
+              icon: '🏛️'
+            });
+            sessionStorage.setItem(notifKey, 'true');
+          }
+        }
+      });
+    };
+    checkDeadlines();
+    const interval = setInterval(checkDeadlines, 30 * 60 * 1000); // Check every 30 min
+    return () => clearInterval(interval);
+  }, [deadlines]);
 
   // Load data - try API first, fallback to localStorage
   useEffect(() => {
@@ -222,8 +257,13 @@ export default function Home() {
       
       // Then fetch from API and update
       try {
-        const apiData = await syncFromApi();
-        if (apiData.habits.length > 0 || apiData.goals.length > 0) {
+        const [apiData, settingsRes, statsRes] = await Promise.all([
+          syncFromApi(),
+          settingsApi.get(),
+          statsApi.get()
+        ]);
+        
+        if (apiData.habits.length > 0 || apiData.goals.length > 0 || apiData.deadlines.length > 0) {
           // Transform habits for UI compatibility
           setHabits(apiData.habits.map((h: any) => ({
             id: h.id,
@@ -241,6 +281,17 @@ export default function Home() {
           setFocusMinutes(apiData.focus.totalMinutes);
           setTotalFocusSessions(apiData.focus.totalSessions);
           if (apiData.todayMood) setMood(apiData.todayMood);
+        }
+        
+        // Load settings from DB
+        if (settingsRes.data) {
+          setSettings(prev => ({ ...prev, name: settingsRes.data!.name, city: settingsRes.data!.city }));
+        }
+        
+        // Load stats
+        if (statsRes.data) {
+          setWeeklyStats(statsRes.data.week);
+          setRecentFocus(statsRes.data.recentFocus);
         }
       } catch (e) {
         console.error('API load error:', e);
@@ -657,6 +708,7 @@ export default function Home() {
           <div style={{ display: 'flex', gap: '12px' }}>
             <Pill icon="✓" value={habits.length ? `${todayHabits}/${habits.length}` : '—'} label="habits" color="#10b981" />
             <Pill icon="🎯" value={goals.length ? `${avgGoals}%` : '—'} label="goals" color="#7c3aed" />
+            {weeklyStats && <Pill icon="📈" value={`${weeklyStats.habitCompletions}`} label="this week" color="#f59e0b" />}
             <Pill icon="⏱️" value={focusMinutes ? `${focusMinutes}m` : '—'} label="focus" color="#06b6d4" />
           </div>
         </header>
@@ -726,6 +778,29 @@ export default function Home() {
                   </div>
                 );
               })}
+            </div>
+          )}
+          
+          {/* 7-Day Habit Calendar */}
+          {habits.length > 0 && habits.some(h => h.completions && h.completions.length > 0) && (
+            <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '10px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 600, color: '#10b981', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📅 Last 7 Days</div>
+              <div style={{ display: 'flex', gap: '4px', justifyContent: 'space-between' }}>
+                {Array.from({ length: 7 }, (_, i) => {
+                  const date = new Date();
+                  date.setDate(date.getDate() - (6 - i));
+                  const dateStr = date.toISOString().split('T')[0];
+                  const dayCompletions = habits.filter(h => h.completions?.includes(dateStr)).length;
+                  const intensity = habits.length > 0 ? dayCompletions / habits.length : 0;
+                  return (
+                    <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#64748b', marginBottom: '4px' }}>{['S','M','T','W','T','F','S'][date.getDay()]}</div>
+                      <div style={{ height: '28px', borderRadius: '4px', backgroundColor: intensity > 0.7 ? '#10b981' : intensity > 0.3 ? 'rgba(16,185,129,0.5)' : intensity > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)', border: dateStr === new Date().toISOString().split('T')[0] ? '2px solid #10b981' : '1px solid transparent' }} />
+                      <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>{dayCompletions}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </section>
@@ -798,6 +873,18 @@ export default function Home() {
                   <button key={m} onClick={() => { setTimerPreset(m); if (!timerRunning) setTimerSeconds(m * 60); }} style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, backgroundColor: timerPreset === m ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.04)', color: timerPreset === m ? '#7c3aed' : '#64748b', border: timerPreset === m ? '1px solid #7c3aed' : '1px solid transparent', cursor: 'pointer' }}>{m}m</button>
                 ))}
               </div>
+              
+              {/* Focus History */}
+              {recentFocus.length > 0 && (
+                <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recent Sessions</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center' }}>
+                    {recentFocus.slice(0, 8).map(s => (
+                      <div key={s.id} title={new Date(s.date).toLocaleDateString()} style={{ width: '28px', height: '28px', borderRadius: '4px', backgroundColor: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 600, color: '#22d3ee' }}>{s.minutes}m</div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -950,9 +1037,18 @@ export default function Home() {
           <Field label="City (weather)"><input value={settings.city} onChange={e => setSettings({ ...settings, city: e.target.value })} style={input} placeholder="New York" /></Field>
           <Field label="OpenAI API Key"><input type="password" value={settings.apiKey} onChange={e => setSettings({ ...settings, apiKey: e.target.value })} style={input} placeholder="sk-..." /></Field>
           <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '16px' }}>Required for AI coach. Get from platform.openai.com</p>
+          
+          <div style={{ padding: '12px', backgroundColor: 'rgba(124,58,237,0.1)', borderRadius: '8px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#a78bfa', marginBottom: '8px' }}>📊 Data Management</div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => exportApi.download()} style={{ ...btnSecondary, flex: 1, fontSize: '11px', padding: '8px' }}>📥 Export Backup</button>
+              <button onClick={() => { if ('Notification' in window) Notification.requestPermission(); showToast('🔔', 'Notifications enabled!'); }} style={{ ...btnSecondary, flex: 1, fontSize: '11px', padding: '8px' }}>🔔 Enable Alerts</button>
+            </div>
+          </div>
+          
           <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={resetAllData} style={{ ...btnSecondary, color: '#f43f5e' }}>Reset All Data</button>
-            <button onClick={() => setActiveModal(null)} style={{ ...btnPrimary, flex: 1 }}>Save</button>
+            <button onClick={async () => { await settingsApi.save({ name: settings.name, city: settings.city }); showToast('✓', 'Settings saved!'); setActiveModal(null); }} style={{ ...btnPrimary, flex: 1 }}>Save</button>
           </div>
         </Modal>
       )}

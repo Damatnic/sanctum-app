@@ -106,6 +106,29 @@ export const moodsApi = {
     apiCall<any>('/moods', { method: 'POST', body: JSON.stringify({ mood }) }),
 }
 
+// Settings
+export const settingsApi = {
+  get: () => apiCall<{ name: string; city: string }>('/settings'),
+  save: (data: { name?: string; city?: string }) =>
+    apiCall<{ name: string; city: string }>('/settings', { method: 'POST', body: JSON.stringify(data) }),
+}
+
+// Stats
+export const statsApi = {
+  get: () => apiCall<{
+    daily: { date: string; habits: number; focusMinutes: number; mood: string | null }[];
+    week: { habitCompletions: number; focusMinutes: number; focusSessions: number };
+    month: { habitCompletions: number; focusMinutes: number; focusSessions: number };
+    recentFocus: { id: string; minutes: number; completed: boolean; date: string }[];
+    moodHistory: { date: string; mood: string }[];
+  }>('/stats'),
+}
+
+// Export
+export const exportApi = {
+  download: () => window.open('/api/export', '_blank'),
+}
+
 // Sync all data from API
 export async function syncFromApi() {
   const [habits, goals, deadlines, projects, journals, focus, moods] = await Promise.all([
