@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateUser, DEFAULT_USER_ID } from '@/lib/user'
+import type { Habit, HabitCompletion } from '@prisma/client'
+
+type HabitWithCompletions = Habit & { completions: HabitCompletion[] }
 
 // GET /api/habits - list all habits for user
 export async function GET(request: NextRequest) {
@@ -23,16 +26,16 @@ export async function GET(request: NextRequest) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    const transformed = habits.map(habit => ({
+    const transformed = habits.map((habit: HabitWithCompletions) => ({
       id: habit.id,
       name: habit.name,
       icon: habit.icon,
       streak: habit.streak,
       longestStreak: habit.longestStreak,
-      todayCompleted: habit.completions.some(c => 
+      todayCompleted: habit.completions.some((c: HabitCompletion) => 
         new Date(c.date).toDateString() === today.toDateString()
       ),
-      completions: habit.completions.map(c => c.date.toISOString().split('T')[0])
+      completions: habit.completions.map((c: HabitCompletion) => c.date.toISOString().split('T')[0])
     }))
     
     return NextResponse.json(transformed)

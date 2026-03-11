@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateUser, DEFAULT_USER_ID } from '@/lib/user'
+import type { MoodLog } from '@prisma/client'
 
 // GET /api/moods - get mood history
 export async function GET(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
       take: 30
     })
     
-    return NextResponse.json(moods.map(m => ({
+    return NextResponse.json(moods.map((m: MoodLog) => ({
       id: m.id,
       mood: m.mood,
       date: m.date.toISOString().split('T')[0]

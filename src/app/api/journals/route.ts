@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateUser, DEFAULT_USER_ID } from '@/lib/user'
+import type { JournalEntry } from '@prisma/client'
 
 // GET /api/journals
 export async function GET(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
       take: 50
     })
     
-    return NextResponse.json(journals.map(j => ({
+    return NextResponse.json(journals.map((j: JournalEntry) => ({
       id: j.id,
       text: j.text,
       mood: j.mood,

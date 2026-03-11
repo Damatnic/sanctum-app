@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { HabitCompletion } from '@prisma/client'
 
 // Calculate streak based on completions
 function calculateStreak(completions: Date[]): number {
@@ -78,7 +79,7 @@ export async function POST(
       orderBy: { date: 'desc' }
     })
     
-    const streak = calculateStreak(completions.map(c => c.date))
+    const streak = calculateStreak(completions.map((c: HabitCompletion) => c.date))
     
     // Update habit with new streak
     const habit = await prisma.habit.update({
@@ -106,7 +107,7 @@ export async function POST(
       streak,
       longestStreak: Math.max(streak, habit.longestStreak),
       todayCompleted,
-      completions: completions.map(c => c.date.toISOString().split('T')[0])
+      completions: completions.map((c: HabitCompletion) => c.date.toISOString().split('T')[0])
     })
   } catch (error) {
     console.error('POST /api/habits/[id]/toggle error:', error)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateUser, DEFAULT_USER_ID } from '@/lib/user'
+import type { Goal } from '@prisma/client'
 
 // GET /api/goals
 export async function GET(request: NextRequest) {
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
     
-    return NextResponse.json(goals.map(g => ({
+    return NextResponse.json(goals.map((g: Goal) => ({
       id: g.id,
       name: g.name,
       icon: g.icon,

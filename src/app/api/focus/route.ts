@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateUser, DEFAULT_USER_ID } from '@/lib/user'
+import type { FocusSession } from '@prisma/client'
 
 // GET /api/focus - get focus session stats
 export async function GET(request: NextRequest) {
@@ -13,21 +14,21 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
     
-    const totalMinutes = sessions.reduce((sum, s) => sum + s.minutes, 0)
+    const totalMinutes = sessions.reduce((sum: number, s: FocusSession) => sum + s.minutes, 0)
     const totalSessions = sessions.length
     
     // Today's sessions
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const todaySessions = sessions.filter(s => new Date(s.createdAt) >= today)
-    const todayMinutes = todaySessions.reduce((sum, s) => sum + s.minutes, 0)
+    const todaySessions = sessions.filter((s: FocusSession) => new Date(s.createdAt) >= today)
+    const todayMinutes = todaySessions.reduce((sum: number, s: FocusSession) => sum + s.minutes, 0)
     
     return NextResponse.json({
       totalMinutes,
       totalSessions,
       todayMinutes,
       todaySessions: todaySessions.length,
-      recentSessions: sessions.slice(0, 10).map(s => ({
+      recentSessions: sessions.slice(0, 10).map((s: FocusSession) => ({
         id: s.id,
         minutes: s.minutes,
         completed: s.completed,

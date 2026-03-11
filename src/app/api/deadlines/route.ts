@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateUser, DEFAULT_USER_ID } from '@/lib/user'
+import type { Deadline } from '@prisma/client'
 
 // GET /api/deadlines
 export async function GET(request: NextRequest) {
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
       orderBy: { dueDate: 'asc' }
     })
     
-    return NextResponse.json(deadlines.map(d => ({
+    return NextResponse.json(deadlines.map((d: Deadline) => ({
       id: d.id,
       title: d.title,
       course: d.course,
