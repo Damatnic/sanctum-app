@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 
 // IMPORTANT: Increment this when data structure changes to force reset
 const DATA_VERSION = 2;
@@ -426,8 +427,16 @@ export default function Home() {
         </div>
         
         <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {['📊 Dashboard', '✓ Habits', '🎯 Goals', '⏱️ Focus', '📝 Journal', '📋 Projects', '📅 Deadlines'].map((item, i) => (
-            <div key={i} style={{ padding: '10px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, color: i === 0 ? '#7c3aed' : '#64748b', backgroundColor: i === 0 ? 'rgba(124,58,237,0.1)' : 'transparent', cursor: 'pointer' }}>{item}</div>
+          {[
+            { href: '/', label: '📊 Dashboard' },
+            { href: '/habits', label: '✓ Habits' },
+            { href: '/goals', label: '🎯 Goals' },
+            { href: '/focus', label: '⏱️ Focus' },
+            { href: '/journal', label: '📝 Journal' },
+            { href: '/projects', label: '📋 Projects' },
+            { href: '/deadlines', label: '📅 Deadlines' },
+          ].map((item, i) => (
+            <Link key={item.href} href={item.href} style={{ padding: '10px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, color: i === 0 ? '#7c3aed' : '#64748b', backgroundColor: i === 0 ? 'rgba(124,58,237,0.1)' : 'transparent', cursor: 'pointer', textDecoration: 'none', display: 'block' }}>{item.label}</Link>
           ))}
           <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.06)', margin: '8px 0' }} />
           <div onClick={() => setActiveModal('settings')} style={{ padding: '10px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, color: '#64748b', cursor: 'pointer' }}>⚙️ Settings</div>

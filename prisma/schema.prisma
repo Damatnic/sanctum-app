@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  city      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  habits    Habit[]
+  goals     Goal[]
+  deadlines Deadline[]
+  projects  Project[]
+  journals  JournalEntry[]
+  focusSessions FocusSession[]
+  moodLogs  MoodLog[]
+}
+
+model Habit {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name          String
+  icon          String   @default("✓")
+  streak        Int      @default(0)
+  longestStreak Int      @default(0)
+  archived      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  completions   HabitCompletion[]
+}
+
+model HabitCompletion {
+  id        String   @id @default(cuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([habitId, date])
+}
+
+model Goal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name      String
+  icon      String   @default("🎯")
+  current   Int      @default(0)
+  target    Int      @default(100)
+  category  String?
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  milestones GoalMilestone[]
+}
+
+model GoalMilestone {
+  id        String   @id @default(cuid())
+  goalId    String
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  
+  value     Int
+  label     String?
+  reached   Boolean  @default(false)
+  reachedAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Deadline {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  course    String?
+  dueDate   DateTime @db.Date
+  done      Boolean  @default(false)
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name      String
+  desc      String?
+  icon      String   @default("📁")
+  color     String   @default("violet")
+  status    String   @default("active") // active, planning, paused, complete
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  text      String
+  mood      String?
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FocusSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  minutes   Int
+  completed Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model MoodLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  mood      String
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
