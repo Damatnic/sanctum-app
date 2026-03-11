@@ -2,30 +2,33 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { habitsApi, goalsApi, deadlinesApi, projectsApi, journalsApi, focusApi, moodsApi, syncFromApi } from '@/lib/api';
 
 // IMPORTANT: Increment this when data structure changes to force reset
 const DATA_VERSION = 2;
 
 // Types
 interface Habit {
-  id: number;
+  id: string;
   name: string;
   icon: string;
   streak: number;
-  completedToday: boolean;
-  lastCompleted?: string;
+  longestStreak?: number;
+  todayCompleted: boolean;
+  completions?: string[];
 }
 
 interface Goal {
-  id: number;
+  id: string;
   name: string;
   icon: string;
   current: number;
   target: number;
+  category?: string;
 }
 
 interface Deadline {
-  id: number;
+  id: string;
   title: string;
   course: string;
   dueDate: string;
@@ -33,7 +36,7 @@ interface Deadline {
 }
 
 interface Project {
-  id: number;
+  id: string;
   name: string;
   desc: string;
   icon: string;
@@ -42,8 +45,8 @@ interface Project {
 }
 
 interface JournalEntry {
-  id: number;
-  date: string;
+  id: string;
+  createdAt: string;
   text: string;
   mood?: string;
 }
@@ -143,32 +146,61 @@ export default function Home() {
   const [toast, setToast] = useState({ show: false, icon: '', text: '' });
   const [confetti, setConfetti] = useState(false);
 
-  // Load data with version check
+  // Load data - try API first, fallback to localStorage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('sanctum-v2');
-      if (saved) {
-        const data: SanctumData = JSON.parse(saved);
-        // Check version - if old version, start fresh
-        if (data.version === DATA_VERSION) {
-          setHabits(data.habits || []);
-          setGoals(data.goals || []);
-          setDeadlines(data.deadlines || []);
-          setProjects(data.projects || []);
-          setJournal(data.journal || []);
-          setMood(data.mood);
-          setQuoteIndex(data.quoteIndex || 0);
-          setFocusMinutes(data.focusMinutes || 0);
-          setTotalFocusSessions(data.totalFocusSessions || 0);
-          setSettings(data.settings || { name: '', city: '', apiKey: '' });
+    async function loadData() {
+      // First load localStorage for settings and instant display
+      try {
+        const saved = localStorage.getItem('sanctum-v2');
+        if (saved) {
+          const data: SanctumData = JSON.parse(saved);
+          if (data.version === DATA_VERSION) {
+            setQuoteIndex(data.quoteIndex || 0);
+            setSettings(data.settings || { name: '', city: '', apiKey: '' });
+            // Set localStorage data as initial (will be overwritten by API)
+            setHabits(data.habits || []);
+            setGoals(data.goals || []);
+            setDeadlines(data.deadlines || []);
+            setProjects(data.projects || []);
+            setJournal(data.journal || []);
+            setMood(data.mood);
+            setFocusMinutes(data.focusMinutes || 0);
+            setTotalFocusSessions(data.totalFocusSessions || 0);
+          }
         }
+      } catch (e) {
+        console.error('localStorage load error:', e);
       }
-      // Clear any old data key
-      localStorage.removeItem('sanctum-data');
-    } catch (e) {
-      console.error('Load error:', e);
+      
+      // Then fetch from API and update
+      try {
+        const apiData = await syncFromApi();
+        if (apiData.habits.length > 0 || apiData.goals.length > 0) {
+          // Transform habits for UI compatibility
+          setHabits(apiData.habits.map((h: any) => ({
+            id: h.id,
+            name: h.name,
+            icon: h.icon,
+            streak: h.streak,
+            longestStreak: h.longestStreak,
+            todayCompleted: h.todayCompleted,
+            completions: h.completions
+          })));
+          setGoals(apiData.goals);
+          setDeadlines(apiData.deadlines);
+          setProjects(apiData.projects);
+          setJournal(apiData.journals.map((j: any) => ({ ...j, date: j.createdAt })));
+          setFocusMinutes(apiData.focus.totalMinutes);
+          setTotalFocusSessions(apiData.focus.totalSessions);
+          if (apiData.todayMood) setMood(apiData.todayMood);
+        }
+      } catch (e) {
+        console.error('API load error:', e);
+      }
+      
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
+    loadData();
   }, []);
 
   // Save data
@@ -207,6 +239,8 @@ export default function Home() {
           showToast('🎉', `${timerPreset}min focus complete!`);
           setConfetti(true);
           setTimeout(() => setConfetti(false), 3000);
+          // Log to API (fire and forget)
+          focusApi.log(timerPreset, true).catch(console.error);
           return timerPreset * 60;
         }
         return s - 1;
@@ -243,128 +277,220 @@ export default function Home() {
   const formatTimer = () => `${Math.floor(timerSeconds / 60).toString().padStart(2, '0')}:${(timerSeconds % 60).toString().padStart(2, '0')}`;
 
   // HABITS
-  const toggleHabit = (id: number) => {
-    const today = getToday();
+  const toggleHabit = async (id: string) => {
+    const habit = habits.find(h => h.id === id);
+    if (!habit) return;
+    
+    // Optimistic update
+    const wasDone = habit.todayCompleted;
     setHabits(prev => prev.map(h => {
       if (h.id !== id) return h;
-      const done = h.lastCompleted === today;
-      if (done) return { ...h, lastCompleted: undefined, streak: Math.max(0, h.streak - 1) };
-      showToast('🔥', `${h.name} done! ${h.streak + 1} day streak`);
-      if ((h.streak + 1) % 7 === 0) { setConfetti(true); setTimeout(() => setConfetti(false), 3000); }
-      return { ...h, lastCompleted: today, streak: h.streak + 1 };
+      return { ...h, todayCompleted: !wasDone, streak: wasDone ? Math.max(0, h.streak - 1) : h.streak + 1 };
     }));
+    
+    if (!wasDone) {
+      showToast('🔥', `${habit.name} done! ${habit.streak + 1} day streak`);
+      if ((habit.streak + 1) % 7 === 0) { setConfetti(true); setTimeout(() => setConfetti(false), 3000); }
+    }
+    
+    // API call
+    const result = await habitsApi.toggle(id);
+    if (result.data) {
+      setHabits(prev => prev.map(h => h.id === id ? {
+        id: result.data.id,
+        name: result.data.name,
+        icon: result.data.icon,
+        streak: result.data.streak,
+        longestStreak: result.data.longestStreak,
+        todayCompleted: result.data.todayCompleted,
+        completions: result.data.completions
+      } : h));
+    }
   };
 
-  const addHabit = () => {
+  const addHabit = async () => {
     if (!newHabit.name.trim()) return;
-    setHabits(prev => [...prev, { id: Date.now(), name: newHabit.name.trim(), icon: newHabit.icon || '✓', streak: 0, completedToday: false }]);
+    
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const newItem = { id: tempId, name: newHabit.name.trim(), icon: newHabit.icon || '✓', streak: 0, todayCompleted: false };
+    setHabits(prev => [...prev, newItem]);
     setNewHabit({ name: '', icon: '✓' });
     setActiveModal(null);
     showToast('✨', 'Habit added!');
+    
+    // API call
+    const result = await habitsApi.create({ name: newHabit.name.trim(), icon: newHabit.icon });
+    if (result.data) {
+      setHabits(prev => prev.map(h => h.id === tempId ? { ...result.data, todayCompleted: result.data.todayCompleted } : h));
+    }
   };
 
-  const saveHabit = () => {
+  const saveHabit = async () => {
     if (!editItem) return;
     setHabits(prev => prev.map(h => h.id === editItem.id ? editItem : h));
     setEditItem(null);
     showToast('✓', 'Saved!');
+    
+    await habitsApi.update(editItem.id, { name: editItem.name, icon: editItem.icon });
   };
 
-  const deleteHabit = (id: number) => {
+  const deleteHabit = async (id: string) => {
     setHabits(prev => prev.filter(h => h.id !== id));
     setEditItem(null);
     showToast('🗑️', 'Deleted');
+    
+    await habitsApi.delete(id);
   };
 
   // GOALS
-  const addGoal = () => {
+  const addGoal = async () => {
     if (!newGoal.name.trim()) return;
-    setGoals(prev => [...prev, { id: Date.now(), name: newGoal.name.trim(), icon: newGoal.icon || '🎯', current: 0, target: parseInt(newGoal.target) || 100 }]);
+    
+    const tempId = `temp-${Date.now()}`;
+    const newItem = { id: tempId, name: newGoal.name.trim(), icon: newGoal.icon || '🎯', current: 0, target: parseInt(newGoal.target) || 100 };
+    setGoals(prev => [...prev, newItem]);
     setNewGoal({ name: '', icon: '🎯', target: '' });
     setActiveModal(null);
     showToast('🎯', 'Goal added!');
+    
+    const result = await goalsApi.create({ name: newGoal.name.trim(), icon: newGoal.icon, target: parseInt(newGoal.target) || 100 });
+    if (result.data) {
+      setGoals(prev => prev.map(g => g.id === tempId ? result.data : g));
+    }
   };
 
-  const incrementGoal = (id: number, amt: number) => {
-    setGoals(prev => prev.map(g => {
-      if (g.id !== id) return g;
-      const curr = Math.min(g.target, Math.max(0, g.current + amt));
-      if (curr === g.target && g.current < g.target) { showToast('🎉', `Goal complete: ${g.name}!`); setConfetti(true); setTimeout(() => setConfetti(false), 3000); }
-      return { ...g, current: curr };
-    }));
+  const incrementGoal = async (id: string, amt: number) => {
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    
+    const curr = Math.min(goal.target, Math.max(0, goal.current + amt));
+    setGoals(prev => prev.map(g => g.id !== id ? g : { ...g, current: curr }));
+    
+    if (curr === goal.target && goal.current < goal.target) {
+      showToast('🎉', `Goal complete: ${goal.name}!`);
+      setConfetti(true);
+      setTimeout(() => setConfetti(false), 3000);
+    }
+    
+    await goalsApi.increment(id, amt);
   };
 
-  const saveGoal = () => {
+  const saveGoal = async () => {
     if (!editItem) return;
     setGoals(prev => prev.map(g => g.id === editItem.id ? editItem : g));
     setEditItem(null);
     showToast('✓', 'Saved!');
+    
+    await goalsApi.update(editItem.id, editItem);
   };
 
-  const deleteGoal = (id: number) => {
+  const deleteGoal = async (id: string) => {
     setGoals(prev => prev.filter(g => g.id !== id));
     setEditItem(null);
     showToast('🗑️', 'Deleted');
+    
+    await goalsApi.delete(id);
   };
 
   // DEADLINES
-  const addDeadline = () => {
+  const addDeadline = async () => {
     if (!newDeadline.title.trim() || !newDeadline.dueDate) return;
-    setDeadlines(prev => [...prev, { id: Date.now(), title: newDeadline.title.trim(), course: newDeadline.course.trim(), dueDate: newDeadline.dueDate, done: false }]);
+    
+    const tempId = `temp-${Date.now()}`;
+    const newItem = { id: tempId, title: newDeadline.title.trim(), course: newDeadline.course.trim(), dueDate: newDeadline.dueDate, done: false };
+    setDeadlines(prev => [...prev, newItem]);
     setNewDeadline({ title: '', course: '', dueDate: '' });
     setActiveModal(null);
     showToast('📅', 'Deadline added!');
+    
+    const result = await deadlinesApi.create({ title: newDeadline.title.trim(), course: newDeadline.course.trim(), dueDate: newDeadline.dueDate });
+    if (result.data) {
+      setDeadlines(prev => prev.map(d => d.id === tempId ? result.data : d));
+    }
   };
 
-  const toggleDeadline = (id: number) => {
-    setDeadlines(prev => prev.map(d => {
-      if (d.id !== id) return d;
-      if (!d.done) showToast('✅', `${d.title} done!`);
-      return { ...d, done: !d.done };
-    }));
+  const toggleDeadline = async (id: string) => {
+    const deadline = deadlines.find(d => d.id === id);
+    if (!deadline) return;
+    
+    const newDone = !deadline.done;
+    setDeadlines(prev => prev.map(d => d.id !== id ? d : { ...d, done: newDone }));
+    if (newDone) showToast('✅', `${deadline.title} done!`);
+    
+    await deadlinesApi.update(id, { done: newDone });
   };
 
-  const saveDeadline = () => {
+  const saveDeadline = async () => {
     if (!editItem) return;
     setDeadlines(prev => prev.map(d => d.id === editItem.id ? editItem : d));
     setEditItem(null);
     showToast('✓', 'Saved!');
+    
+    await deadlinesApi.update(editItem.id, editItem);
   };
 
-  const deleteDeadline = (id: number) => {
+  const deleteDeadline = async (id: string) => {
     setDeadlines(prev => prev.filter(d => d.id !== id));
     setEditItem(null);
     showToast('🗑️', 'Deleted');
+    
+    await deadlinesApi.delete(id);
   };
 
   // PROJECTS
-  const addProject = () => {
+  const addProject = async () => {
     if (!newProject.name.trim()) return;
-    setProjects(prev => [...prev, { id: Date.now(), name: newProject.name.trim(), desc: newProject.desc.trim(), icon: newProject.icon || '📁', color: newProject.color, status: newProject.status }]);
+    
+    const tempId = `temp-${Date.now()}`;
+    const newItem = { id: tempId, name: newProject.name.trim(), desc: newProject.desc.trim(), icon: newProject.icon || '📁', color: newProject.color, status: newProject.status };
+    setProjects(prev => [...prev, newItem]);
     setNewProject({ name: '', desc: '', icon: '📁', color: 'violet', status: 'active' });
     setActiveModal(null);
     showToast('📋', 'Project added!');
+    
+    const result = await projectsApi.create(newItem);
+    if (result.data) {
+      setProjects(prev => prev.map(p => p.id === tempId ? result.data : p));
+    }
   };
 
-  const saveProject = () => {
+  const saveProject = async () => {
     if (!editItem) return;
     setProjects(prev => prev.map(p => p.id === editItem.id ? editItem : p));
     setEditItem(null);
     showToast('✓', 'Saved!');
+    
+    await projectsApi.update(editItem.id, editItem);
   };
 
-  const deleteProject = (id: number) => {
+  const deleteProject = async (id: string) => {
     setProjects(prev => prev.filter(p => p.id !== id));
     setEditItem(null);
     showToast('🗑️', 'Deleted');
+    
+    await projectsApi.delete(id);
   };
 
   // JOURNAL
-  const saveJournal = () => {
+  const saveJournal = async () => {
     if (!journalInput.trim()) return;
-    setJournal(prev => [...prev, { id: Date.now(), date: new Date().toISOString(), text: journalInput.trim(), mood: mood || undefined }]);
+    
+    const tempId = `temp-${Date.now()}`;
+    const newEntry = { id: tempId, createdAt: new Date().toISOString(), text: journalInput.trim(), mood: mood || undefined };
+    setJournal(prev => [...prev, newEntry]);
     setJournalInput('');
     showToast('📝', 'Saved!');
+    
+    const result = await journalsApi.create({ text: journalInput.trim(), mood: mood || undefined });
+    if (result.data) {
+      setJournal(prev => prev.map(j => j.id === tempId ? { ...result.data, createdAt: result.data.createdAt } : j));
+    }
+    
+    // Also log mood if set
+    if (mood) {
+      await moodsApi.log(mood);
+    }
   };
 
   // RESET
@@ -392,7 +518,7 @@ export default function Home() {
     setChatMessages(prev => [...prev, { role: 'user', content: msg }]);
     setChatLoading(true);
     try {
-      const ctx = `Date: ${formatDate()}\nHabits: ${habits.filter(h => h.lastCompleted === getToday()).length}/${habits.length}\nMood: ${mood || 'N/A'}`;
+      const ctx = `Date: ${formatDate()}\nHabits: ${habits.filter(h => h.todayCompleted).length}/${habits.length}\nMood: ${mood || 'N/A'}`;
       const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, context: ctx, apiKey: settings.apiKey }) });
       const data = await res.json();
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.error ? `⚠️ ${data.error}` : data.reply }]);
@@ -401,7 +527,7 @@ export default function Home() {
   };
 
   // Stats
-  const todayHabits = habits.filter(h => h.lastCompleted === getToday()).length;
+  const todayHabits = habits.filter(h => h.todayCompleted).length;
   const avgGoals = goals.length ? Math.round(goals.reduce((s, g) => s + (g.current / g.target) * 100, 0) / goals.length) : 0;
   const maxStreak = habits.length ? Math.max(...habits.map(h => h.streak)) : 0;
   const quote = quotes[quoteIndex % quotes.length];
@@ -506,7 +632,7 @@ export default function Home() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
               {habits.map(h => {
-                const done = h.lastCompleted === getToday();
+                const done = h.todayCompleted;
                 return (
                   <div key={h.id} style={{ ...card, padding: '14px', position: 'relative', borderColor: done ? 'rgba(16,185,129,0.3)' : undefined, backgroundColor: done ? 'rgba(16,185,129,0.05)' : undefined }}>
                     <div onClick={() => toggleHabit(h.id)} style={{ cursor: 'pointer' }}>
