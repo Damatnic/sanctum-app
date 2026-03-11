@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     await getOrCreateUser(userId)
     
     const body = await request.json()
-    const { name, icon, target, category } = body
+    const { name, icon, target, category, current } = body
     
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
         name,
         icon: icon || '🎯',
         target: target || 100,
+        current: current || 0,
         category
       }
     })
