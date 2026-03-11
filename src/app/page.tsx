@@ -443,7 +443,7 @@ export default function Home() {
       </aside>
 
       {/* Main */}
-      <main style={{ marginLeft: '220px', padding: '24px', flex: 1, maxWidth: '1000px' }}>
+      <main style={{ marginLeft: '220px', padding: '24px 32px', flex: 1, maxWidth: '1400px' }}>
         {/* Header */}
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
@@ -458,7 +458,7 @@ export default function Home() {
         </header>
 
         {/* Weather + Quote */}
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '16px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px', marginBottom: '24px' }}>
           <div style={{ ...card, padding: '16px' }}>
             <div style={sectionTitle}>Weather</div>
             {weather ? (
@@ -515,7 +515,7 @@ export default function Home() {
         </section>
 
         {/* Goals + Timer */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', marginBottom: '24px' }}>
           <section>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <span style={sectionTitle}>Goals</span>
