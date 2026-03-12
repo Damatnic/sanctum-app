@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Sanctum pre-commit hook — lint + type check staged files
+
+echo "🔍 Running lint-staged checks..."
+npx lint-staged
+
+echo "🔎 Running full type check..."
+npm run type-check

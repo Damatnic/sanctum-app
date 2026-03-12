@@ -4,13 +4,20 @@
   "private": true,
   "scripts": {
     "postinstall": "prisma generate",
+    "prepare": "husky",
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
@@ -39,8 +46,10 @@
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "husky": "^9.1.7",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
+    "lint-staged": "^16.3.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
